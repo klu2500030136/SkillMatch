@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SkillMatch{% endblock %} | Employee Intelligence</title>
+    
+    <!-- Phosphor Icons (Modern Icon Library) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/variables.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <button id="mobileMenuBtn" class="mobile-menu-btn" aria-label="Toggle menu">
+                    <i class="ph ph-list"></i>
+                </button>
+                
+                <a href="{{ url_for('main.index') }}" class="brand">
+                    <div class="brand-logo">SM</div>
+                    <div class="brand-text">
+                        <span class="brand-name">SkillMatch</span>
+                        <span class="brand-subtitle">Employee Intelligence</span>
+                    </div>
+                </a>
+                
+                <div class="breadcrumb">
+                    Dashboard <span class="text-muted">/</span> {% block breadcrumb %}Upload Dataset{% endblock %}
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <div class="dataset-status-mini">
+                    {% if session.get('dataset', {}).get('loaded') %}
+                        <div id="dataset-status" class="status-dot status-loaded" style="background-color: var(--color-success);"></div>
+                        <span id="dataset-status-text">Dataset Ready</span>
+                    {% else %}
+                        <div id="dataset-status" class="status-dot"></div>
+                        <span id="dataset-status-text">Waiting for dataset</span>
+                    {% endif %}
+                </div>
+                
+                <div class="header-actions">
+                    <button class="icon-btn" aria-label="Notifications">
+                        <i class="ph ph-bell"></i>
+                    </button>
+                    <div class="profile-avatar" aria-label="User Profile">
+                        <i class="ph ph-user"></i>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="app-sidebar">
+            <div class="nav-section">
+                <div class="nav-section-title">Data Preparation</div>
+                <nav class="nav-list">
+                    <a href="{{ url_for('main.upload') }}" class="nav-item {% if request.endpoint == 'main.upload' %}active{% endif %}">
+                        <i class="ph ph-upload-simple"></i>
+                        <span class="nav-num text-xs text-muted mr-2">01</span> Upload Dataset
+                    </a>
+                    <a href="{{ url_for('main.analyse') }}" class="nav-item {% if request.endpoint == 'main.analyse' %}active{% endif %}">
+                        <i class="ph ph-magnifying-glass-chart"></i>
+                        <span class="nav-num text-xs text-muted mr-2">02</span> Analyse Features
+                    </a>
+                    <a href="{{ url_for('main.statistics') }}" class="nav-item {% if request.endpoint == 'main.statistics' %}active{% endif %}">
+                        <i class="ph ph-chart-bar"></i>
+                        <span class="nav-num text-xs text-muted mr-2">03</span> Descriptive Statistics
+                    </a>
+                    <a href="{{ url_for('main.missing_values') }}" class="nav-item {% if request.endpoint == 'main.missing_values' %}active{% endif %}">
+                        <i class="ph ph-warning-circle"></i>
+                        <span class="nav-num text-xs text-muted mr-2">04</span> Missing Value Analysis
+                    </a>
+                    <a href="{{ url_for('main.visualization') }}" class="nav-item {% if request.endpoint == 'main.visualization' %}active{% endif %}">
+                        <i class="ph ph-chart-line-up"></i>
+                        <span class="nav-num text-xs text-muted mr-2">05</span> Data Visualization
+                    </a>
+                    <a href="{{ url_for('main.preprocessing') }}" class="nav-item {% if request.endpoint == 'main.preprocessing' %}active{% endif %}">
+                        <i class="ph ph-sliders"></i>
+                        <span class="nav-num text-xs text-muted mr-2">06</span> Preprocessing
+                    </a>
+                </nav>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Machine Learning</div>
+                <nav class="nav-list">
+                    <a href="{{ url_for('main.training') }}" class="nav-item {% if request.endpoint == 'main.training' %}active{% endif %}">
+                        <i class="ph ph-brain"></i>
+                        <span class="nav-num text-xs text-muted mr-2">07</span> Model Training
+                    </a>
+                    <a href="{{ url_for('main.evaluation') }}" class="nav-item {% if request.endpoint == 'main.evaluation' %}active{% endif %}">
+                        <i class="ph ph-target"></i>
+                        <span class="nav-num text-xs text-muted mr-2">08</span> Model Evaluation
+                    </a>
+                    <a href="{{ url_for('main.predict') }}" class="nav-item {% if request.endpoint == 'main.predict' %}active{% endif %}">
+                        <i class="ph ph-sparkle"></i>
+                        <span class="nav-num text-xs text-muted mr-2">09</span> Predict Employee
+                    </a>
+                </nav>
+            </div>
+        </aside>
+        
+        <!-- Main Content Area -->
+        <main class="app-main">
+            <div class="page-content">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% if messages %}
+                    <div class="flash-messages mb-6">
+                      {% for category, message in messages %}
+                        <div class="card flash-card flash-{{ category }} mb-2" style="border-left: 4px solid {% if category == 'danger' %}var(--color-danger){% elif category == 'success' %}var(--color-success){% else %}var(--color-primary){% endif %}; padding: var(--space-3) var(--space-4);">
+                          {{ message }}
+                        </div>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                {% endwith %}
+                
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+        
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

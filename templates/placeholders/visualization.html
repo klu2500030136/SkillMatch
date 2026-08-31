@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Data Visualization{% endblock %}
+{% block breadcrumb %}Data Visualization{% endblock %}
+
+{% block content %}
+<div class="empty-state">
+    <i class="ph ph-chart-line-up empty-state-icon"></i>
+    <h2 class="empty-state-title">Data Visualization</h2>
+    <p class="empty-state-desc">Explore employee patterns through interactive visualizations.</p>
+    
+    <span class="badge badge-accent mb-6">Coming in Phase 5</span>
+    
+    <a href="{{ url_for('main.upload') }}" class="btn btn-primary">
+        <i class="ph ph-arrow-left"></i> Return to Upload
+    </a>
+</div>
+{% endblock %}

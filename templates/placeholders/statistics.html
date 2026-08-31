@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Descriptive Statistics{% endblock %}
+{% block breadcrumb %}Descriptive Statistics{% endblock %}
+
+{% block content %}
+<div class="empty-state">
+    <i class="ph ph-chart-bar empty-state-icon"></i>
+    <h2 class="empty-state-title">Descriptive Statistics</h2>
+    <p class="empty-state-desc">Understand the statistical profile of the employee dataset.</p>
+    
+    <span class="badge badge-accent mb-6">Coming in Phase 3</span>
+    
+    <a href="{{ url_for('main.upload') }}" class="btn btn-primary">
+        <i class="ph ph-arrow-left"></i> Return to Upload
+    </a>
+</div>
+{% endblock %}

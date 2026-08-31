@@ -1,0 +1,22 @@
+{
+    "project": "SkillMatch",
+    "task": "classification",
+    "target": "Attrition",
+    "model": "Support Vector Machine",
+    "selection_metric": "f1",
+    "validation_metrics": {
+        "name": "Support Vector Machine",
+        "status": "success",
+        "accuracy": 84.55,
+        "precision": 51.22,
+        "recall": 60.0,
+        "f1": 55.26,
+        "roc_auc": 80.19,
+        "training_time": 0.7548
+    },
+    "random_state": 42,
+    "training_rows": 1029,
+    "validation_rows": 220,
+    "feature_count": 51,
+    "trained_at": "2026-08-31T10:58:29.842852"
+}

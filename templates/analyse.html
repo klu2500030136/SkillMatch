@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Analyse Features - SkillMatch{% endblock %}
+{% block breadcrumb %}Analyse Features{% endblock %}
+
+{% block content %}
+<div class="page-header mb-6">
+    <h1 class="page-title">Analyse Employee Features</h1>
+    <p class="page-subtitle text-muted">Explore how employee characteristics are distributed, how they differ across groups, and how they relate to attrition and tenure.</p>
+</div>
+
+{% if not dataset or not dataset.loaded %}
+<div class="card text-center py-8">
+    <div class="mb-4">
+        <i class="ph ph-database text-muted" style="font-size: 48px;"></i>
+    </div>
+    <h2 class="text-lg font-medium mb-2">No Dataset Loaded</h2>
+    <p class="text-muted mb-4">Upload an HR dataset before starting feature analysis.</p>
+    <a href="{{ url_for('main.upload') }}" class="btn btn-primary">Upload Dataset</a>
+</div>
+{% else %}
+<div class="grid grid-cols-1 md-grid-cols-2 gap-6 mb-6">
+    <!-- Feature Analysis Panel -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Feature Analysis</h2>
+        </div>
+        <div class="card-body">
+            <form id="analysis-form">
+                <div class="form-group mb-4">
+                    <label class="form-label">Select Feature</label>
+                    <select id="feature-select" class="form-control" required>
+                        <option value="" disabled selected>Choose a feature...</option>
+                        {% for col in schema %}
+                            <option value="{{ col.column }}" data-type="{{ col.dtype }}">{{ col.column }} ({{ col.dtype }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group mb-4">
+                    <label class="form-label">Select Analysis Method</label>
+                    <select id="analysis-method" class="form-control" required>
+                        <option value="" disabled selected>Choose an analysis method...</option>
+                        <option value="distribution">Distribution</option>
+                        <option value="summary">Summary</option>
+                        <option value="missingness">Missingness</option>
+                        <option value="target_relationship">Target Relationship (Attrition)</option>
+                        <option value="group_comparison">Group Comparison</option>
+                        <option value="correlation">Correlation (Numerical Only)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group mb-4 hidden" id="group-col-container">
+                    <label class="form-label">Select Grouping Column</label>
+                    <select id="group-col-select" class="form-control">
+                        <option value="" disabled selected>Choose grouping column...</option>
+                        {% for col in schema %}
+                            <option value="{{ col.column }}">{{ col.column }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button type="submit" class="btn btn-primary" id="btn-run-analysis">
+                        <i class="ph ph-play"></i> Run Analysis
+                    </button>
+                    <button type="button" class="btn btn-outline" id="btn-clear-analysis">
+                        Clear Analysis
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Ask the HR Dataset Panel -->
+    <div class="card border-primary">
+        <div class="card-header bg-primary-light">
+            <h2 class="card-title text-primary"><i class="ph ph-magnifying-glass mr-2"></i> Ask the HR Dataset</h2>
+        </div>
+        <div class="card-body">
+            <p class="text-sm text-muted mb-4">Explore common HR questions using your uploaded employee dataset.</p>
+            
+            <form id="hr-question-form">
+                <div class="form-group mb-4">
+                    <label class="form-label">What would you like to understand?</label>
+                    <select id="question-select" class="form-control" required>
+                        <option value="" disabled selected>Select a question...</option>
+                        <option value="q1">Distance from home by job role and attrition</option>
+                        <option value="q2">Average monthly income by education and attrition</option>
+                        <option value="q3">Attrition by overtime</option>
+                        <option value="q4">Attrition by job role</option>
+                        <option value="q5">Attrition by job satisfaction</option>
+                        <option value="q6">Attrition by work-life balance</option>
+                        <option value="q7">Attrition by years at company</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-full" id="btn-run-question">
+                    Explore Question
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Results Area -->
+<div id="results-container" class="hidden">
+    <div class="card">
+        <div class="card-header flex justify-between align-center">
+            <h2 class="card-title" id="result-title">Analysis Result</h2>
+            <div id="loading-spinner" class="hidden">
+                <i class="ph ph-spinner animate-spin text-primary" style="font-size: 24px;"></i>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="result-error" class="flash-card flash-danger mb-4 hidden" style="border-left: 4px solid var(--color-danger); padding: var(--space-3) var(--space-4);"></div>
+            
+            <div id="result-content" class="hidden">
+                <p id="result-summary" class="text-lg mb-6 font-medium text-primary-dark"></p>
+                
+                <div class="grid grid-cols-1 lg-grid-cols-2 gap-6">
+                    <div id="chart-container" class="relative hidden" style="height: 300px; width: 100%;">
+                        <canvas id="analysisChart"></canvas>
+                    </div>
+                    
+                    <div id="table-container" class="table-responsive hidden">
+                        <table class="table w-full text-sm" id="result-table">
+                            <thead id="result-table-head"></thead>
+                            <tbody id="result-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Load Chart.js and Custom Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/analyse.js') }}"></script>
+{% endblock %}

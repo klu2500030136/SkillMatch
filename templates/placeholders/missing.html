@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Missing Value Analysis{% endblock %}
+{% block breadcrumb %}Missing Value Analysis{% endblock %}
+
+{% block content %}
+<div class="empty-state">
+    <i class="ph ph-warning-circle empty-state-icon"></i>
+    <h2 class="empty-state-title">Missing Value Analysis</h2>
+    <p class="empty-state-desc">Identify missing information and understand data quality.</p>
+    
+    <span class="badge badge-accent mb-6">Coming in Phase 4</span>
+    
+    <a href="{{ url_for('main.upload') }}" class="btn btn-primary">
+        <i class="ph ph-arrow-left"></i> Return to Upload
+    </a>
+</div>
+{% endblock %}

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Descriptive Statistics - SkillMatch{% endblock %}
+{% block breadcrumb %}Descriptive Statistics{% endblock %}
+
+{% block content %}
+<div class="page-header mb-6">
+    <h1 class="page-title">Descriptive Statistics</h1>
+    <p class="page-subtitle text-muted">Understand the statistical structure of your employee dataset before preprocessing and modeling.</p>
+</div>
+
+{% if not dataset or not dataset.loaded %}
+<div class="card text-center py-8">
+    <div class="mb-4">
+        <i class="ph ph-database text-muted" style="font-size: 48px;"></i>
+    </div>
+    <h2 class="text-lg font-medium mb-2">Upload an employee dataset to generate statistical insights.</h2>
+    <a href="{{ url_for('main.upload') }}" class="btn btn-primary mt-4">Upload Dataset</a>
+</div>
+{% else %}
+{% if overview.total_rows == 0 %}
+<div class="card text-center py-8">
+    <h2 class="text-lg font-medium mb-2">Your dataset contains no records to analyze.</h2>
+    <a href="{{ url_for('main.upload') }}" class="btn btn-primary mt-4">Replace Dataset</a>
+</div>
+{% else %}
+<p class="mb-4 text-muted">This dataset contains {{ overview.total_rows }} employee records across {{ overview.total_columns }} variables.</p>
+
+<h2 class="text-lg font-medium mb-4">DATASET OVERVIEW</h2>
+<div class="grid grid-cols-2 md-grid-cols-3 lg-grid-cols-6 gap-4 mb-8">
+    <div class="card text-center p-4 border-primary">
+        <div class="text-2xl font-bold text-primary">{{ overview.total_rows }}</div>
+        <div class="text-sm text-muted">Rows</div>
+    </div>
+    <div class="card text-center p-4 border-primary">
+        <div class="text-2xl font-bold text-primary">{{ overview.total_columns }}</div>
+        <div class="text-sm text-muted">Columns</div>
+    </div>
+    <div class="card text-center p-4">
+        <div class="text-2xl font-bold">{{ overview.numerical_features }}</div>
+        <div class="text-sm text-muted">Numerical Features</div>
+    </div>
+    <div class="card text-center p-4">
+        <div class="text-2xl font-bold">{{ overview.categorical_features }}</div>
+        <div class="text-sm text-muted">Categorical Features</div>
+    </div>
+    <div class="card text-center p-4">
+        <div class="text-2xl font-bold">{{ overview.missing_values }}</div>
+        <div class="text-sm text-muted">Missing Values</div>
+    </div>
+    <div class="card text-center p-4">
+        <div class="text-2xl font-bold">{{ overview.duplicate_rows }}</div>
+        <div class="text-sm text-muted">Duplicate Rows</div>
+    </div>
+</div>
+
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-lg font-medium">STATISTICS EXPLORER</h2>
+    <div class="flex gap-4">
+        <select id="stat-filter" class="form-control" style="width: auto;">
+            <option value="all">All Columns</option>
+            <option value="numerical">Numerical</option>
+            <option value="categorical">Categorical</option>
+        </select>
+        <input type="text" id="stat-search" class="form-control" placeholder="Search columns..." style="width: 200px;">
+    </div>
+</div>
+
+<div id="numerical-section" class="card mb-6">
+    <div class="card-header">
+        <h3 class="card-title">Numerical Statistics</h3>
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table w-full text-sm" id="num-table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th class="text-right">Count</th>
+                    <th class="text-right">Mean</th>
+                    <th class="text-right">Median</th>
+                    <th class="text-right">Std Dev</th>
+                    <th class="text-right">Min</th>
+                    <th class="text-right">Q1</th>
+                    <th class="text-right">Q2</th>
+                    <th class="text-right">Q3</th>
+                    <th class="text-right">Max</th>
+                    <th class="text-right">IQR</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in numerical_stats %}
+                <tr class="stat-row num-row" data-feature="{{ stat.feature | lower }}">
+                    <td class="font-medium">{{ stat.feature }}</td>
+                    <td class="text-right">{{ stat.count }}</td>
+                    <td class="text-right">{{ stat.mean if stat.mean != None else 'N/A' }}</td>
+                    <td class="text-right">{{ stat.median if stat.median != None else 'N/A' }}</td>
+                    <td class="text-right">{{ stat.std_dev if stat.std_dev != None else 'N/A' }}</td>
+                    <td class="text-right">{{ stat.min if stat.min != None else 'N/A' }}</td>
+                    <td class="text-right">{{ stat.q1 if stat.q1 != None else 'N/A' }}</td>
+                    <td class="text-right">{{ stat.q2 if stat.q2 != None else 'N/A' }}</td>
+                    <td class="text-right">{{ stat.q3 if stat.q3 != None else 'N/A' }}</td>
+                    <td class="text-right">{{ stat.max if stat.max != None else 'N/A' }}</td>
+                    <td class="text-right">{{ stat.iqr if stat.iqr != None else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+                {% if not numerical_stats %}
+                <tr><td colspan="11" class="text-center text-muted">No numerical features found.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="categorical-section" class="card mb-8">
+    <div class="card-header">
+        <h3 class="card-title">Categorical Statistics</h3>
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table w-full text-sm" id="cat-table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th class="text-right">Unique Values</th>
+                    <th>Most Frequent</th>
+                    <th class="text-right">Frequency</th>
+                    <th class="text-right">Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in categorical_stats %}
+                <tr class="stat-row cat-row" data-feature="{{ stat.feature | lower }}">
+                    <td class="font-medium">{{ stat.feature }}</td>
+                    <td class="text-right">{{ stat.unique_values }}</td>
+                    <td>{{ stat.most_frequent }}</td>
+                    <td class="text-right">{{ stat.frequency }}</td>
+                    <td class="text-right">{{ stat.percentage }}%</td>
+                </tr>
+                {% endfor %}
+                {% if not categorical_stats %}
+                <tr><td colspan="5" class="text-center text-muted">No categorical features found.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<h2 class="text-lg font-medium mb-4">INSPECT A COLUMN</h2>
+<div class="card mb-6">
+    <div class="card-header bg-primary-light">
+        <div class="form-group mb-0 flex items-center gap-4">
+            <select id="inspect-column" class="form-control" style="max-width: 300px;">
+                <option value="" disabled selected>Select a column...</option>
+                {% for col in columns %}
+                <option value="{{ col }}">{{ col }}</option>
+                {% endfor %}
+            </select>
+            <div id="inspect-spinner" class="hidden">
+                <i class="ph ph-spinner animate-spin text-primary" style="font-size: 24px;"></i>
+            </div>
+        </div>
+    </div>
+    <div class="card-body hidden" id="inspect-result">
+        <div id="inspect-error" class="flash-card flash-danger mb-4 hidden" style="border-left: 4px solid var(--color-danger); padding: var(--space-3) var(--space-4);"></div>
+        
+        <div class="grid grid-cols-1 lg-grid-cols-2 gap-6" id="inspect-content">
+            <!-- Stats will be rendered here -->
+            <div>
+                <h3 class="text-lg font-medium text-primary-dark mb-4" id="inspect-title"></h3>
+                <div class="table-responsive">
+                    <table class="table w-full text-sm">
+                        <tbody id="inspect-stats-body"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Chart will be rendered here -->
+            <div>
+                <h3 class="text-lg font-medium text-primary-dark mb-4" id="chart-title">Distribution</h3>
+                <div id="inspector-chart-container" class="relative" style="height: 300px; width: 100%;">
+                    <canvas id="inspectorChart"></canvas>
+                </div>
+                <div id="inspector-table-container" class="table-responsive hidden mt-4">
+                    <table class="table w-full text-sm text-center">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Count</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inspector-cat-table"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/statistics.js') }}"></script>
+{% endblock %}

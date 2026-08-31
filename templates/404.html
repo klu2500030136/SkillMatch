@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found{% endblock %}
+{% block breadcrumb %}Error 404{% endblock %}
+
+{% block content %}
+<div class="empty-state">
+    <i class="ph ph-warning-octagon empty-state-icon" style="color: var(--color-warning);"></i>
+    <h2 class="empty-state-title">Page Not Found (404)</h2>
+    <p class="empty-state-desc">The page you are looking for doesn't exist or has been moved.</p>
+    
+    <a href="{{ url_for('main.upload') }}" class="btn btn-primary">
+        <i class="ph ph-house"></i> Return to Dashboard
+    </a>
+</div>
+{% endblock %}

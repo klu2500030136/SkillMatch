@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}Data Preprocessing - SkillMatch{% endblock %}
+{% block breadcrumb %}Data Preprocessing{% endblock %}
+
+{% block content %}
+<div class="page-header mb-6">
+    <h1 class="page-title">Data Preprocessing</h1>
+    <p class="page-subtitle text-muted">Prepare your employee data for machine learning.</p>
+</div>
+
+{% if not dataset or not dataset.loaded %}
+<div class="card text-center py-8">
+    <div class="mb-4">
+        <i class="ph ph-wrench text-muted" style="font-size: 48px;"></i>
+    </div>
+    <h2 class="text-lg font-medium mb-2">Upload an employee dataset before configuring preprocessing.</h2>
+    <a href="{{ url_for('main.upload') }}" class="btn btn-primary mt-4">Upload Dataset</a>
+</div>
+{% else %}
+
+<div class="grid grid-cols-1 lg-grid-cols-4 gap-6 mb-8">
+    
+    <!-- LEFT SIDE: Dataset Readiness -->
+    <div class="lg-col-span-1">
+        <div class="card mb-6">
+            <div class="card-header">
+                <h2 class="card-title">Dataset Readiness</h2>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item flex justify-between items-center">
+                        <span>Rows</span>
+                        <span class="font-bold">{{ metadata.rows }}</span>
+                    </li>
+                    <li class="list-group-item flex justify-between items-center">
+                        <span>Columns</span>
+                        <span class="font-bold">{{ metadata.columns }}</span>
+                    </li>
+                    <li class="list-group-item flex justify-between items-center">
+                        <span>Missing Cols</span>
+                        <span class="font-bold {% if metadata.missing_cols %}text-danger{% else %}text-success{% endif %}">
+                            {{ metadata.missing_cols | length }}
+                        </span>
+                    </li>
+                    <li class="list-group-item flex justify-between items-center">
+                        <span>Duplicates</span>
+                        <span class="font-bold {% if metadata.duplicates > 0 %}text-warning{% endif %}">
+                            {{ metadata.duplicates }}
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card bg-primary-light border-primary">
+            <div class="card-body">
+                <h3 class="text-sm font-bold text-primary mb-2">PIPELINE SUMMARY</h3>
+                <div class="flex flex-col gap-2 text-sm text-gray-700">
+                    <div class="flex items-center gap-2"><i class="ph ph-arrow-right text-primary"></i> 1. Target config</div>
+                    <div class="flex items-center gap-2"><i class="ph ph-arrow-right text-primary"></i> 2. Data Cleaning</div>
+                    <div class="flex items-center gap-2"><i class="ph ph-arrow-right text-primary"></i> 3. Missing Values</div>
+                    <div class="flex items-center gap-2"><i class="ph ph-arrow-right text-primary"></i> 4. Encoding</div>
+                    <div class="flex items-center gap-2"><i class="ph ph-arrow-right text-primary"></i> 5. Scaling</div>
+                    <div class="flex items-center gap-2"><i class="ph ph-arrow-right text-primary"></i> 6. Feature Selection</div>
+                    <div class="flex items-center gap-2"><i class="ph ph-arrow-right text-primary"></i> 7. Data Split</div>
+                    <div class="flex items-center gap-2 font-bold text-primary-dark mt-2"><i class="ph ph-check-circle"></i> ML Ready</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- RIGHT SIDE: Configuration Workspace -->
+    <div class="lg-col-span-3">
+        
+        {% if preprocessing_state %}
+        <div class="alert alert-success mb-6">
+            <div class="flex items-center gap-2 font-bold mb-1">
+                <i class="ph ph-check-circle text-lg"></i> Preprocessing Applied
+            </div>
+            <p class="text-sm">This dataset has been successfully preprocessed and is ready for Phase 7 (Model Training).</p>
+            <div class="mt-4">
+                <button type="button" class="btn btn-success btn-sm" id="btn-view-results">View Results</button>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div id="preprocess-config-area">
+            <form id="preprocess-form">
+                
+                <!-- Target Config -->
+                <div class="card mb-6">
+                    <div class="card-header bg-gray-50"><h2 class="card-title">Target Configuration</h2></div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <strong class="block mb-1"><i class="ph ph-target"></i> Primary Objective: Attrition Prediction</strong>
+                            <p class="text-sm">We are training a Classification model to predict if an employee will leave the company (Attrition).</p>
+                        </div>
+                        
+                        <div id="target-distribution-info" class="mt-4 p-3 bg-gray-50 rounded text-sm">
+                            <strong class="block mb-1">Class Distribution (Attrition):</strong>
+                            <div id="dist-counts" class="flex gap-4">
+                                {% for class, count in metadata.target_class_dist.items() %}
+                                <span>{{ class }}: {{ count }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Data Cleaning -->
+                <div class="card mb-6">
+                    <div class="card-header bg-gray-50"><h2 class="card-title">Data Cleaning</h2></div>
+                    <div class="card-body">
+                        <div class="form-group flex justify-between items-center p-3 border rounded mb-4">
+                            <div>
+                                <strong class="block">Duplicate Removal</strong>
+                                <span class="text-sm text-muted">{{ metadata.duplicates }} duplicate rows detected.</span>
+                            </div>
+                            <div class="form-switch">
+                                <input class="form-check-input" type="checkbox" id="remove_duplicates" {% if metadata.duplicates > 0 %}checked{% endif %}>
+                                <label class="form-check-label" for="remove_duplicates">Remove</label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <strong class="block mb-2">Constant Features Detected</strong>
+                            {% if metadata.constant_features %}
+                                <div class="table-responsive">
+                                    <table class="table w-full text-sm">
+                                        <thead><tr><th>Feature</th><th>Value</th><th>Action</th></tr></thead>
+                                        <tbody>
+                                        {% for cf in metadata.constant_features %}
+                                        <tr>
+                                            <td>{{ cf.feature }}</td>
+                                            <td>{{ cf.value }}</td>
+                                            <td>
+                                                <div class="form-check">
+                                                    <input class="form-check-input remove-feature-cb" type="checkbox" value="{{ cf.feature }}" id="rm_{{ cf.feature }}" checked>
+                                                    <label class="form-check-label" for="rm_{{ cf.feature }}">Exclude</label>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-sm text-muted">No constant features detected.</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div>
+                            <strong class="block mb-2">Potential Identifier Features</strong>
+                            {% if metadata.identifier_candidates %}
+                                <div class="table-responsive">
+                                    <table class="table w-full text-sm">
+                                        <thead><tr><th>Feature</th><th>Reason</th><th>Action</th></tr></thead>
+                                        <tbody>
+                                        {% for idf in metadata.identifier_candidates %}
+                                        <tr>
+                                            <td>{{ idf }}</td>
+                                            <td class="text-muted">Unique identifiers have no predictive value and can cause leakage.</td>
+                                            <td>
+                                                <div class="form-check">
+                                                    <input class="form-check-input remove-feature-cb" type="checkbox" value="{{ idf }}" id="rm_{{ idf }}" checked>
+                                                    <label class="form-check-label" for="rm_{{ idf }}">Exclude</label>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-sm text-muted">No identifier features detected.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Missing Values -->
+                <div class="card mb-6">
+                    <div class="card-header bg-gray-50 flex justify-between items-center">
+                        <h2 class="card-title">Missing Value Handling</h2>
+                        {% if not metadata.missing_cols %}
+                        <span class="badge bg-success-light text-success-dark">No Imputation Required</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <div class="grid grid-cols-1 md-grid-cols-2 gap-4">
+                            <div class="form-group">
+                                <label class="form-label font-bold">What should we do with empty numerical cells?</label>
+                                <p class="text-xs text-muted mb-2">Machine learning models cannot handle missing data.</p>
+                                <select id="num_imputation" class="form-control" {% if not metadata.missing_cols %}disabled{% endif %}>
+                                    <option value="median" selected>Use the middle value (Median Imputation)</option>
+                                    <option value="mean">Use the average value (Mean Imputation)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label font-bold">What should we do with empty categorical cells?</label>
+                                <p class="text-xs text-muted mb-2">Fill in the blanks for text categories.</p>
+                                <select id="cat_imputation" class="form-control" {% if not metadata.missing_cols %}disabled{% endif %}>
+                                    <option value="most_frequent" selected>Use the most common value (Mode Imputation)</option>
+                                    <option value="constant">Put 'Unknown' as a new category</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Encoding & Scaling -->
+                <div class="card mb-6">
+                    <div class="card-header bg-gray-50"><h2 class="card-title">Encoding & Scaling</h2></div>
+                    <div class="card-body">
+                        <div class="grid grid-cols-1 md-grid-cols-3 gap-4">
+                            <div class="form-group">
+                                <label class="form-label font-bold">Text Categories</label>
+                                <input type="text" class="form-control bg-gray-100" value="One-Hot Encoding" readonly>
+                                <div class="text-xs text-muted mt-1">Automatically converts text to numbers safely.</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label font-bold">Ranked Categories</label>
+                                <input type="text" class="form-control bg-gray-100" value="Ordinal Encoding" readonly>
+                                <div class="text-xs text-muted mt-1">Preserves ranked meaning (e.g., Low to High).</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label font-bold">How should we scale numbers?</label>
+                                <select id="scaling" class="form-control">
+                                    <option value="standard" selected>Standardize them (Z-Score)</option>
+                                    <option value="minmax">Normalize to 0-1 range (MinMax)</option>
+                                    <option value="none">Don't scale them</option>
+                                </select>
+                                <div class="text-xs text-muted mt-1">Ensures all numerical features are on the same scale.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Data Split -->
+                <div class="card mb-6">
+                    <div class="card-header bg-gray-50"><h2 class="card-title">Data Split</h2></div>
+                    <div class="card-body">
+                        <div class="grid grid-cols-1 md-grid-cols-4 gap-4">
+                            <div class="form-group">
+                                <label class="form-label">Train %</label>
+                                <input type="number" id="train_size" class="form-control split-input" value="70" min="50" max="90">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Validation %</label>
+                                <input type="number" id="val_size" class="form-control split-input" value="15" min="5" max="30">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Test %</label>
+                                <input type="number" id="test_size" class="form-control split-input" value="15" min="5" max="30">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Random State</label>
+                                <input type="number" id="random_state" class="form-control" value="42">
+                            </div>
+                        </div>
+                        <div id="split-error" class="text-danger text-sm mt-2 hidden">Train, Validation, and Test proportions must total 100%.</div>
+                        <div class="text-sm text-muted mt-2"><i class="ph ph-info"></i> Classification targets are automatically stratified to preserve class balance.</div>
+                    </div>
+                </div>
+                
+                <div class="flex gap-4">
+                    <button type="submit" class="btn btn-primary btn-lg" id="btn-apply-preprocessing">
+                        Apply Preprocessing
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Results Area (Hidden initially) -->
+        <div id="preprocessing-results" class="hidden mt-8">
+            <h2 class="text-xl font-bold mb-4">Preprocessing Summary</h2>
+            
+            <div class="grid grid-cols-1 md-grid-cols-2 gap-6 mb-6">
+                <div class="card border-primary">
+                    <div class="card-header bg-primary-light">
+                        <h3 class="card-title text-primary">Before</h3>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush text-sm">
+                            <li class="list-group-item flex justify-between"><span>Rows:</span> <strong id="res-orig-rows"></strong></li>
+                            <li class="list-group-item flex justify-between"><span>Features:</span> <strong id="res-orig-cols"></strong></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card border-success">
+                    <div class="card-header bg-success-light">
+                        <h3 class="card-title text-success-dark">After</h3>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush text-sm">
+                            <li class="list-group-item flex justify-between"><span>Rows:</span> <strong id="res-proc-rows"></strong></li>
+                            <li class="list-group-item flex justify-between"><span>Final ML Features:</span> <strong id="res-proc-feats"></strong></li>
+                            <li class="list-group-item flex justify-between text-muted text-xs"><span>Duplicates Removed:</span> <strong id="res-dups-removed"></strong></li>
+                            <li class="list-group-item flex justify-between text-muted text-xs"><span>Features Excluded:</span> <strong id="res-feats-removed"></strong></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 class="font-medium mb-3">Data Split Result</h3>
+            <div class="grid grid-cols-3 gap-4 mb-6">
+                <div class="bg-gray-100 p-3 rounded text-center">
+                    <div class="text-xl font-bold text-primary" id="res-train-rows"></div>
+                    <div class="text-sm text-muted">Train Rows</div>
+                </div>
+                <div class="bg-gray-100 p-3 rounded text-center">
+                    <div class="text-xl font-bold text-primary" id="res-val-rows"></div>
+                    <div class="text-sm text-muted">Validation Rows</div>
+                </div>
+                <div class="bg-gray-100 p-3 rounded text-center">
+                    <div class="text-xl font-bold text-primary" id="res-test-rows"></div>
+                    <div class="text-sm text-muted">Test Rows</div>
+                </div>
+            </div>
+            
+            <h3 class="font-medium mb-3">Processed Training Data Preview (Top 5)</h3>
+            <div class="card mb-6">
+                <div class="card-body p-0 overflow-x-auto">
+                    <table class="table w-full text-xs whitespace-nowrap" id="preview-table">
+                        <thead id="preview-thead"></thead>
+                        <tbody id="preview-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <button type="button" class="btn btn-outline" id="btn-reconfigure">Reconfigure Preprocessing</button>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+{% endif %}
+
+<!-- Inject State if exists -->
+<script id="preprocessing-state-data" type="application/json">
+    {% if preprocessing_state %}
+    {{ preprocessing_state | tojson | safe }}
+    {% else %}
+    null
+    {% endif %}
+</script>
+
+<script src="{{ url_for('static', filename='js/preprocessing.js') }}"></script>
+{% endblock %}

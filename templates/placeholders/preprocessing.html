@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Preprocessing{% endblock %}
+{% block breadcrumb %}Preprocessing{% endblock %}
+
+{% block content %}
+<div class="empty-state">
+    <i class="ph ph-sliders empty-state-icon"></i>
+    <h2 class="empty-state-title">Preprocessing</h2>
+    <p class="empty-state-desc">Transform raw HR data into machine-learning-ready features.</p>
+    
+    <span class="badge badge-accent mb-6">Coming in Phase 6</span>
+    
+    <a href="{{ url_for('main.upload') }}" class="btn btn-primary">
+        <i class="ph ph-arrow-left"></i> Return to Upload
+    </a>
+</div>
+{% endblock %}

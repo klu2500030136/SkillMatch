@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Predict Employee{% endblock %}
+{% block breadcrumb %}Predict Employee{% endblock %}
+
+{% block content %}
+<div class="empty-state">
+    <i class="ph ph-sparkle empty-state-icon"></i>
+    <h2 class="empty-state-title">Predict Employee</h2>
+    <p class="empty-state-desc">Estimate attrition risk and employee tenure from an employee profile.</p>
+    
+    <span class="badge badge-accent mb-6">Coming in Phase 9</span>
+    
+    <a href="{{ url_for('main.upload') }}" class="btn btn-primary">
+        <i class="ph ph-arrow-left"></i> Return to Upload
+    </a>
+</div>
+{% endblock %}

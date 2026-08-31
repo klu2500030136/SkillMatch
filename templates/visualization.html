@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Data Visualization - SkillMatch{% endblock %}
+{% block breadcrumb %}Data Visualization{% endblock %}
+
+{% block content %}
+<div class="page-header mb-6">
+    <h1 class="page-title">Data Visualization</h1>
+    <p class="page-subtitle text-muted">Explore employee patterns, distributions, relationships, and attrition trends visually.</p>
+</div>
+
+{% if not dataset or not dataset.loaded %}
+<div class="card text-center py-8">
+    <div class="mb-4">
+        <i class="ph ph-chart-line-up text-muted" style="font-size: 48px;"></i>
+    </div>
+    <h2 class="text-lg font-medium mb-2">Upload an employee dataset to begin exploring visual patterns.</h2>
+    <a href="{{ url_for('main.upload') }}" class="btn btn-primary mt-4">Upload Dataset</a>
+</div>
+{% else %}
+
+<!-- HR Quick Views -->
+<div class="card mb-6 border-primary">
+    <div class="card-header bg-primary-light">
+        <h2 class="card-title text-primary"><i class="ph ph-lightning mr-2"></i> HR Quick Views</h2>
+    </div>
+    <div class="card-body">
+        <div class="flex flex-wrap gap-2">
+            <button class="btn btn-outline btn-sm hr-shortcut" data-type="grouped_bar" data-x="MonthlyIncome" data-group="Department" data-agg="mean">Monthly Income by Department</button>
+            <button class="btn btn-outline btn-sm hr-shortcut" data-type="grouped_bar" data-x="MonthlyIncome" data-group="Education" data-agg="mean">Monthly Income by Education</button>
+            <button class="btn btn-outline btn-sm hr-shortcut" data-type="grouped_bar" data-x="YearsAtCompany" data-group="Attrition" data-agg="mean">Years at Company by Attrition</button>
+            <button class="btn btn-outline btn-sm hr-shortcut" data-type="grouped_bar" data-x="DistanceFromHome" data-group="Attrition" data-agg="mean">Distance from Home by Attrition</button>
+            
+            <button class="btn btn-outline btn-sm hr-shortcut" data-type="grouped_bar" data-x="JobRole" data-group="Attrition" data-agg="count">Attrition by Job Role</button>
+            <button class="btn btn-outline btn-sm hr-shortcut" data-type="grouped_bar" data-x="Department" data-group="Attrition" data-agg="count">Attrition by Department</button>
+            <button class="btn btn-outline btn-sm hr-shortcut" data-type="grouped_bar" data-x="OverTime" data-group="Attrition" data-agg="count">Attrition by Overtime</button>
+            <button class="btn btn-outline btn-sm hr-shortcut" data-type="grouped_bar" data-x="JobSatisfaction" data-group="Attrition" data-agg="count">Attrition by Job Satisfaction</button>
+            <button class="btn btn-outline btn-sm hr-shortcut" data-type="grouped_bar" data-x="WorkLifeBalance" data-group="Attrition" data-agg="count">Attrition by Work-Life Balance</button>
+            <button class="btn btn-outline btn-sm hr-shortcut" data-type="grouped_bar" data-x="BusinessTravel" data-group="Attrition" data-agg="count">Attrition by Business Travel</button>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg-grid-cols-12 gap-6 mb-8">
+    
+    <!-- Explorer Form -->
+    <div class="lg-col-span-4" style="min-width: 0;">
+        <div class="card h-full">
+            <div class="card-header">
+                <h2 class="card-title">Visualization Explorer</h2>
+            </div>
+            <div class="card-body">
+                <form id="viz-form">
+                    <div class="form-group mb-4">
+                        <label class="form-label">Chart Type</label>
+                        <select id="chart-type" class="form-control" required>
+                            <option value="" disabled selected>Select a chart type...</option>
+                            <optgroup label="Univariate">
+                                <option value="histogram">Histogram</option>
+                                <option value="bar">Bar / Count Chart</option>
+                                <option value="boxplot">Box Plot</option>
+                            </optgroup>
+                            <optgroup label="Bivariate / Grouped">
+                                <option value="scatter">Scatter Plot</option>
+                                <option value="grouped_bar">Grouped Bar Chart</option>
+                            </optgroup>
+                            <optgroup label="Relationship">
+                                <option value="heatmap">Correlation Heatmap</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group mb-4" id="x-axis-container">
+                        <label class="form-label">X-Axis / Feature</label>
+                        <select id="x-axis" class="form-control">
+                            <option value="" disabled selected>Select a feature...</option>
+                            {% for col in columns %}
+                            <option value="{{ col }}" data-num="{{ 'true' if col in num_cols else 'false' }}">{{ col }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group mb-4 hidden" id="y-axis-container">
+                        <label class="form-label">Y-Axis</label>
+                        <select id="y-axis" class="form-control">
+                            <option value="" disabled selected>Select numerical Y-axis...</option>
+                            {% for col in num_cols %}
+                            <option value="{{ col }}">{{ col }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group mb-4 hidden" id="group-container">
+                        <label class="form-label">Grouping Variable</label>
+                        <select id="group-axis" class="form-control">
+                            <option value="" disabled selected>Select grouping...</option>
+                            {% for col in columns %}
+                            <option value="{{ col }}">{{ col }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group mb-4 hidden" id="agg-container">
+                        <label class="form-label">Aggregation</label>
+                        <select id="aggregation" class="form-control">
+                            <option value="mean" selected>Mean</option>
+                            <option value="median">Median</option>
+                            <option value="sum">Sum</option>
+                            <option value="count">Count</option>
+                        </select>
+                    </div>
+                    
+                    <hr class="mb-4">
+                    
+                    <div class="form-group mb-4">
+                        <label class="form-label">Filter (Optional)</label>
+                        <select id="filter-column" class="form-control mb-2">
+                            <option value="" selected>No Filter</option>
+                            {% for col, vals in filter_options.items() %}
+                            <option value="{{ col }}">{{ col }}</option>
+                            {% endfor %}
+                        </select>
+                        
+                        <select id="filter-value" class="form-control hidden">
+                            <option value="" disabled selected>Select value...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex gap-2 mt-6">
+                        <button type="submit" class="btn btn-primary flex-1" id="btn-generate">
+                            Generate Visualization
+                        </button>
+                        <button type="button" class="btn btn-outline" id="btn-clear">
+                            Clear
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Result Area -->
+    <div class="lg-col-span-8" style="min-width: 0;">
+        <div class="card h-full flex flex-col" id="result-card" style="min-width: 0;">
+            <div class="card-header flex justify-between items-center">
+                <h2 class="card-title">Visualization Result</h2>
+                <div id="viz-spinner" class="hidden">
+                    <i class="ph ph-spinner animate-spin text-primary" style="font-size: 24px;"></i>
+                </div>
+            </div>
+            
+            <div class="card-body flex-1 flex flex-col relative" id="viz-body">
+                <!-- Initial State -->
+                <div id="viz-empty-state" class="flex flex-col items-center justify-center h-full text-muted py-12">
+                    <i class="ph ph-chart-polar text-muted mb-4" style="font-size: 48px;"></i>
+                    <p class="text-lg">Visualization Ready</p>
+                    <p>Choose a chart type and variables to explore the employee dataset.</p>
+                </div>
+                
+                <!-- Error State -->
+                <div id="viz-error" class="flash-card flash-danger mb-4 hidden" style="border-left: 4px solid var(--color-danger); padding: var(--space-3) var(--space-4);"></div>
+                
+                <!-- Content State -->
+                <div id="viz-content" class="hidden flex-1 flex flex-col w-full">
+                    <h3 id="viz-title" class="text-xl font-medium text-primary-dark mb-2"></h3>
+                    <p id="viz-insight" class="text-gray-700 mb-4 bg-primary-light p-3 rounded" style="border-left: 4px solid var(--color-primary);"></p>
+                    
+                    <div class="flex-1 w-full relative" style="min-height: 400px;" id="chart-container">
+                        <canvas id="vizChart"></canvas>
+                        
+                        <!-- Correlation Heatmap Container -->
+                        <div id="heatmap-container" class="hidden w-full h-full overflow-auto">
+                            <table class="table w-full text-xs text-center border-collapse" id="heatmap-table">
+                                <!-- Generated dynamically -->
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div id="table-container" class="mt-6 hidden w-full overflow-x-auto">
+                        <table class="table w-full text-sm" id="viz-table">
+                            <!-- Generated dynamically -->
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+<!-- Inject Filter Options for JS -->
+<script id="filter-options-data" type="application/json">
+    {{ filter_options | tojson | safe }}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4.3.0/build/index.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/visualization.js') }}"></script>
+{% endblock %}

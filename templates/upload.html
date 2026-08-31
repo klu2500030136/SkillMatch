@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Dataset{% endblock %}
+{% block breadcrumb %}Upload Dataset{% endblock %}
+
+{% block content %}
+{% if not dataset.loaded %}
+<!-- DATA INTAKE STATE -->
+<div class="page-header">
+    <div class="eyebrow">Data Intake</div>
+    <h1 class="page-title">Bring your employee data into SkillMatch</h1>
+    <p class="page-description">Upload your HR dataset to begin exploring workforce patterns, employee characteristics, and attrition-related insights.</p>
+</div>
+
+<div class="upload-workspace">
+    <!-- Left Column: Upload Area -->
+    <div class="upload-section">
+        <div class="card">
+            
+            <form id="upload-form" action="{{ url_for('main.upload') }}" method="POST" enctype="multipart/form-data">
+                <!-- File Upload State -->
+                <div id="upload-area" class="upload-area">
+                    <i class="ph ph-cloud-arrow-up upload-icon"></i>
+                    <h3 class="upload-title">Drop your employee dataset here</h3>
+                    <p class="upload-subtitle">or click to browse files</p>
+                    
+                    <button type="button" class="btn btn-primary" onclick="document.getElementById('dataset-upload').click()">
+                        <i class="ph ph-folder-open"></i> Choose Dataset
+                    </button>
+                    
+                    <div class="upload-requirements">
+                        <span class="upload-req-item"><i class="ph ph-file-csv"></i> CSV, XLSX, XLS</span>
+                        <span class="upload-req-item"><i class="ph ph-hard-drives"></i> Max 10 MB</span>
+                    </div>
+                    
+                    <input type="file" name="dataset_file" id="dataset-upload" class="file-input" accept=".csv, .xlsx, .xls" aria-label="Upload Dataset">
+                </div>
+
+                <!-- File Selected State -->
+                <div id="file-selected-state" class="file-selected-state">
+                    <div class="file-card">
+                        <div class="file-info">
+                            <i class="ph ph-file-csv"></i>
+                            <div class="file-details">
+                                <span id="file-name" class="file-name">dataset.csv</span>
+                                <span id="file-size" class="file-size">2.4 MB</span>
+                            </div>
+                        </div>
+                        <button type="button" id="remove-file-btn" class="btn-remove-file" aria-label="Remove File">
+                            <i class="ph ph-x-circle"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Loading State -->
+                    <div id="loading-indicator" style="display: none;" class="flex flex-col items-center gap-2 mb-4">
+                        <i class="ph ph-spinner ph-spin text-primary" style="font-size: 24px;"></i>
+                        <span class="text-sm text-secondary">Uploading and analyzing dataset structure...</span>
+                    </div>
+
+                    <div class="mt-4 flex gap-4" id="upload-actions">
+                        <button type="button" class="btn btn-outline" onclick="document.getElementById('remove-file-btn').click()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            Upload Dataset <i class="ph ph-upload-simple"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+        </div>
+    </div>
+    
+    <!-- Right Column: Journey Info -->
+    <div class="info-section">
+        <h3 class="font-semibold mb-4 text-primary">What happens next?</h3>
+        
+        <div class="journey-panel">
+            <div class="journey-card">
+                <div class="journey-icon"><i class="ph ph-magnifying-glass"></i></div>
+                <div class="journey-content">
+                    <h4 class="journey-title">Explore</h4>
+                    <p class="journey-desc">Understand employee patterns and relationships.</p>
+                </div>
+            </div>
+            
+            <div class="journey-card">
+                <div class="journey-icon"><i class="ph ph-wrench"></i></div>
+                <div class="journey-content">
+                    <h4 class="journey-title">Prepare</h4>
+                    <p class="journey-desc">Transform HR data into ML-ready features.</p>
+                </div>
+            </div>
+            
+            <div class="journey-card">
+                <div class="journey-icon"><i class="ph ph-brain"></i></div>
+                <div class="journey-content">
+                    <h4 class="journey-title">Train</h4>
+                    <p class="journey-desc">Compare multiple machine-learning models.</p>
+                </div>
+            </div>
+            
+            <div class="journey-card">
+                <div class="journey-icon"><i class="ph ph-chart-line-up"></i></div>
+                <div class="journey-content">
+                    <h4 class="journey-title">Evaluate</h4>
+                    <p class="journey-desc">Measure model performance and reliability.</p>
+                </div>
+            </div>
+            
+            <div class="journey-card">
+                <div class="journey-icon"><i class="ph ph-sparkle"></i></div>
+                <div class="journey-content">
+                    <h4 class="journey-title">Predict</h4>
+                    <p class="journey-desc">Estimate employee attrition risk and tenure.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- DATASET READY STATE -->
+<div class="page-header flex justify-between items-center">
+    <div>
+        <div class="eyebrow text-success">DATASET READY</div>
+        <h1 class="page-title">{{ dataset.original_filename }}</h1>
+    </div>
+    <div class="flex gap-4">
+        <button onclick="document.getElementById('replace-form').submit()" class="btn btn-outline">
+            <i class="ph ph-arrows-left-right"></i> Replace Dataset
+        </button>
+        <form id="replace-form" action="{{ url_for('main.remove_dataset') }}" method="POST" style="display: none;"></form>
+        
+        <button onclick="if(confirm('Are you sure you want to remove this dataset?')) document.getElementById('remove-form').submit()" class="btn btn-outline" style="color: var(--color-danger); border-color: var(--color-border);">
+            <i class="ph ph-trash"></i> Remove
+        </button>
+        <form id="remove-form" action="{{ url_for('main.remove_dataset') }}" method="POST" style="display: none;"></form>
+    </div>
+</div>
+
+<div class="flex flex-col gap-8">
+    <!-- Dataset Overview -->
+    <div>
+        <h3 class="font-semibold mb-4 text-primary">DATASET OVERVIEW</h3>
+        <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4);">
+            <div class="card">
+                <div class="text-secondary text-sm mb-1">Rows</div>
+                <div class="text-2xl font-bold">{{ "{:,}".format(dataset.metadata.rows) }}</div>
+                {% if dataset.metadata.duplicate_rows > 0 %}
+                <div class="text-xs text-warning mt-1"><i class="ph ph-warning-circle"></i> {{ dataset.metadata.duplicate_rows }} duplicates</div>
+                {% endif %}
+            </div>
+            <div class="card">
+                <div class="text-secondary text-sm mb-1">Columns</div>
+                <div class="text-2xl font-bold">{{ "{:,}".format(dataset.metadata.columns) }}</div>
+            </div>
+            <div class="card">
+                <div class="text-secondary text-sm mb-1">Missing Values</div>
+                <div class="text-2xl font-bold">{{ "{:,}".format(dataset.metadata.missing_values) }}</div>
+            </div>
+            <div class="card">
+                <div class="text-secondary text-sm mb-1">File Type</div>
+                <div class="text-2xl font-bold uppercase">{{ dataset.file_type }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Targets -->
+    <div>
+        <h3 class="font-semibold mb-4 text-primary">MODEL TARGETS</h3>
+        <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-6);">
+            
+            <!-- Primary Target (Classification) -->
+            <div class="card" style="border-top: 4px solid var(--color-primary);">
+                <div class="text-xs font-semibold text-secondary uppercase mb-2">Primary Prediction Objective</div>
+                {% if dataset.targets.classification %}
+                <div class="flex justify-between items-start mb-2">
+                    <div class="text-xl font-bold">{{ dataset.targets.classification.name }}</div>
+                    <span class="badge badge-accent">Detected</span>
+                </div>
+                <div class="text-sm font-medium mb-1">{{ dataset.targets.classification.type }}</div>
+                <div class="text-sm text-secondary">{{ dataset.targets.classification.description }}</div>
+                {% else %}
+                <div class="text-xl font-bold text-muted mb-2">Not Detected</div>
+                <div class="text-sm text-secondary">No classification target identified.</div>
+                {% endif %}
+            </div>
+
+            <!-- Secondary Target (Regression) -->
+            <div class="card" style="border-top: 4px solid var(--color-accent);">
+                <div class="text-xs font-semibold text-secondary uppercase mb-2">Secondary Prediction Objective</div>
+                {% if dataset.targets.regression %}
+                <div class="flex justify-between items-start mb-2">
+                    <div class="text-xl font-bold">{{ dataset.targets.regression.name }}</div>
+                    <span class="badge badge-accent">Detected</span>
+                </div>
+                <div class="text-sm font-medium mb-1">{{ dataset.targets.regression.type }}</div>
+                <div class="text-sm text-secondary">{{ dataset.targets.regression.description }}</div>
+                {% else %}
+                <div class="text-xl font-bold text-muted mb-2">Not Detected</div>
+                <div class="text-sm text-secondary">No regression target identified.</div>
+                {% endif %}
+            </div>
+
+        </div>
+        <p class="text-xs text-secondary mt-3"><i class="ph ph-info"></i> Targets are identified from the uploaded dataset and will be used by later ML phases.</p>
+    </div>
+
+    <!-- Dataset Schema -->
+    <div>
+        <h3 class="font-semibold mb-4 text-primary">DATASET SCHEMA</h3>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Column</th>
+                        <th>Data Type</th>
+                        <th class="text-right">Non-Null Count</th>
+                        <th class="text-right">Missing Count</th>
+                        <th class="text-right">Unique Values</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for col in dataset.schema %}
+                    <tr>
+                        <td class="font-medium">{{ col.column }}</td>
+                        <td><span class="badge badge-accent">{{ col.dtype }}</span></td>
+                        <td class="text-right">{{ "{:,}".format(col.non_null) }}</td>
+                        <td class="text-right">
+                            {% if col.missing > 0 %}
+                            <span class="text-warning font-semibold">{{ "{:,}".format(col.missing) }}</span>
+                            {% else %}
+                            0
+                            {% endif %}
+                        </td>
+                        <td class="text-right">{{ "{:,}".format(col.unique) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Data Preview -->
+    <div>
+        <h3 class="font-semibold mb-4 text-primary">DATA PREVIEW <span class="text-sm font-normal text-secondary ml-2">(Showing first {{ dataset.preview.data|length }} rows)</span></h3>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        {% for col in dataset.preview.columns %}
+                        <th>{{ col }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in dataset.preview.data %}
+                    <tr>
+                        {% for col in dataset.preview.columns %}
+                        <td>{{ row[col] }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Ready for Analysis -->
+    <div class="card" style="background-color: var(--color-surface-secondary); border: 1px dashed var(--color-border); text-align: center; padding: var(--space-8);">
+        <h3 class="text-xl font-bold mb-2">Ready for Analysis</h3>
+        <p class="text-secondary mb-6">The dataset has been successfully loaded and profiled. It is ready for the next stage.</p>
+        <a href="{{ url_for('main.analyse') }}" class="btn btn-primary">
+            Continue to Analyse Features <i class="ph ph-arrow-right"></i>
+        </a>
+    </div>
+
+</div>
+{% endif %}
+
+<script>
+    // Update dataset status dot dynamically based on server state
+    document.addEventListener('DOMContentLoaded', () => {
+        const statusDot = document.getElementById('dataset-status');
+        const statusText = document.getElementById('dataset-status-text');
+        
+        {% if dataset.loaded %}
+            if(statusDot) statusDot.classList.add('ready');
+            if(statusText) statusText.textContent = 'Dataset ready';
+        {% else %}
+            if(statusDot) statusDot.classList.remove('ready');
+            if(statusText) statusText.textContent = 'Waiting for dataset';
+        {% endif %}
+    });
+</script>
+{% endblock %}

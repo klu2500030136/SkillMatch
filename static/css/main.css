@@ -1,0 +1,187 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Global Reset */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family-main);
+    background-color: var(--color-background);
+    color: var(--color-text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--color-text);
+    font-weight: var(--font-semibold);
+    line-height: 1.2;
+}
+
+a {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+a:hover {
+    color: var(--color-primary-hover);
+}
+
+ul {
+    list-style: none;
+}
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+/* Utilities */
+.text-primary { color: var(--color-primary); }
+.text-accent { color: var(--color-accent); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-muted { color: var(--color-text-muted); }
+
+.font-medium { font-weight: var(--font-medium); }
+.font-semibold { font-weight: var(--font-semibold); }
+
+.mt-2 { margin-top: var(--space-2); }
+.mt-4 { margin-top: var(--space-4); }
+.mt-6 { margin-top: var(--space-6); }
+.mt-8 { margin-top: var(--space-8); }
+
+.mb-2 { margin-bottom: var(--space-2); }
+.mb-4 { margin-bottom: var(--space-4); }
+.mb-6 { margin-bottom: var(--space-6); }
+
+.flex { display: flex; }
+.flex-col { display: flex; flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.gap-2 { gap: var(--space-2); }
+.gap-4 { gap: var(--space-4); }
+.gap-6 { gap: var(--space-6); }
+
+/* Accessible hidden content */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Tailwind-like utilities used in templates */
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+.whitespace-nowrap { white-space: nowrap; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.relative { position: relative; }
+.overflow-x-auto { overflow-x: auto; }
+.overflow-auto { overflow: auto; }
+.border-collapse { border-collapse: collapse; }
+.border-b { border-bottom: 1px solid var(--color-border); }
+
+/* Display & Flex */
+.block { display: block; }
+.inline-block { display: inline-block; }
+.flex-1 { flex: 1 1 0%; }
+.flex-wrap { flex-wrap: wrap; }
+.items-start { align-items: flex-start; }
+.justify-end { justify-content: flex-end; }
+
+/* Grid specific */
+.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+@media (min-width: 768px) {
+    .md-grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .md-grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .md-grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+    .lg-grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .lg-grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .lg-grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .lg-grid-cols-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .lg-grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+}
+
+/* Typography */
+.text-xs { font-size: var(--font-size-xs); }
+.text-sm { font-size: var(--font-size-sm); }
+.text-base { font-size: var(--font-size-md); }
+.text-lg { font-size: var(--font-size-lg); }
+.text-xl { font-size: var(--font-size-xl); }
+
+.font-normal { font-weight: var(--font-normal); }
+.font-bold { font-weight: var(--font-bold); }
+
+.uppercase { text-transform: uppercase; }
+
+/* Colors - Backgrounds */
+.bg-gray-50 { background-color: #F9FAFB; }
+.bg-gray-100 { background-color: #F3F4F6; }
+.bg-primary-light { background-color: var(--color-surface-secondary); }
+.bg-success-light { background-color: #DEF7EC; }
+.bg-warning-light { background-color: #FEF3C7; }
+.bg-danger-light { background-color: #FDE8E8; }
+
+/* Colors - Text */
+.text-primary-dark { color: var(--color-secondary); }
+.text-gray-700 { color: var(--color-text-secondary); }
+.text-success { color: var(--color-success); }
+.text-success-dark { color: #046C4E; }
+.text-warning { color: var(--color-warning); }
+.text-warning-dark { color: #B45309; }
+.text-danger { color: var(--color-danger); }
+.text-danger-dark { color: #C81E1E; }
+
+/* Margins */
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: var(--space-xs); }
+.mb-3 { margin-bottom: var(--space-md); }
+.mb-8 { margin-bottom: var(--space-2xl); }
+.mt-1 { margin-top: var(--space-xs); }
+.mt-3 { margin-top: var(--space-md); }
+.ml-2 { margin-left: var(--space-sm); }
+.mr-2 { margin-right: var(--space-sm); }
+
+/* Paddings */
+.p-0 { padding: 0; }
+.p-3 { padding: var(--space-sm); }
+.p-4 { padding: var(--space-md); }
+.px-2 { padding-left: var(--space-xs); padding-right: var(--space-xs); }
+.py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.py-4 { padding-top: var(--space-md); padding-bottom: var(--space-md); }
+.py-8 { padding-top: var(--space-xl); padding-bottom: var(--space-xl); }
+.py-12 { padding-top: var(--space-2xl); padding-bottom: var(--space-2xl); }
+.pb-2 { padding-bottom: var(--space-sm); }
+
+/* Misc */
+.rounded { border-radius: var(--radius-md); }
+.cursor-pointer { cursor: pointer; }
+
+/* Bootstrap-like fallbacks */
+.alert { padding: var(--space-md); border-radius: var(--radius-md); margin-bottom: var(--space-md); }
+.alert-danger { background-color: var(--color-danger); color: white; }
+.alert-success { background-color: var(--color-success); color: white; }
+.alert-info { background-color: var(--color-primary); color: white; }
+
+/* Grid Col Spans */
+@media (min-width: 1024px) {
+    .lg-col-span-1 { grid-column: span 1 / span 1; }
+    .lg-col-span-2 { grid-column: span 2 / span 2; }
+    .lg-col-span-3 { grid-column: span 3 / span 3; }
+    .lg-col-span-4 { grid-column: span 4 / span 4; }
+    .lg-col-span-8 { grid-column: span 8 / span 8; }
+    .lg-col-span-9 { grid-column: span 9 / span 9; }
+}
