@@ -1,0 +1,76 @@
+{
+    "project": "SkillMatch",
+    "task": "cross_validation",
+    "target": "Attrition",
+    "model": "Support Vector Machine",
+    "n_splits": 5,
+    "cv_type": "StratifiedKFold",
+    "random_state": 42,
+    "train_rows": 1029,
+    "features_count": 34,
+    "fold_results": [
+        {
+            "fold": 1,
+            "accuracy": 0.8398,
+            "precision": 0.5192,
+            "recall": 0.7714,
+            "f1": 0.6207,
+            "roc_auc": 0.8506
+        },
+        {
+            "fold": 2,
+            "accuracy": 0.7573,
+            "precision": 0.3846,
+            "recall": 0.7143,
+            "f1": 0.5,
+            "roc_auc": 0.8062
+        },
+        {
+            "fold": 3,
+            "accuracy": 0.7816,
+            "precision": 0.4098,
+            "recall": 0.7353,
+            "f1": 0.5263,
+            "roc_auc": 0.8355
+        },
+        {
+            "fold": 4,
+            "accuracy": 0.835,
+            "precision": 0.5,
+            "recall": 0.7941,
+            "f1": 0.6136,
+            "roc_auc": 0.8972
+        },
+        {
+            "fold": 5,
+            "accuracy": 0.7902,
+            "precision": 0.4082,
+            "recall": 0.5882,
+            "f1": 0.4819,
+            "roc_auc": 0.8019
+        }
+    ],
+    "summary": {
+        "accuracy": {
+            "mean": 0.8008,
+            "std": 0.0318
+        },
+        "precision": {
+            "mean": 0.4444,
+            "std": 0.0544
+        },
+        "recall": {
+            "mean": 0.7207,
+            "std": 0.0718
+        },
+        "f1": {
+            "mean": 0.5485,
+            "std": 0.0578
+        },
+        "roc_auc": {
+            "mean": 0.8383,
+            "std": 0.0346
+        }
+    },
+    "executed_at": "2026-10-09T00:28:25.841933"
+}

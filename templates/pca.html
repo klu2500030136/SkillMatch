@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}PCA & Feature Identification - SkillMatch{% endblock %}
+{% block breadcrumb %}PCA & Feature Identification{% endblock %}
+
+{% block content %}
+<div class="page-header mb-6">
+    <h1 class="page-title">PCA & Feature Identification</h1>
+    <p class="page-subtitle text-muted">Understand how employee features are prepared and reduced before machine learning.</p>
+</div>
+
+{% if not dataset or not dataset.loaded %}
+<div class="card text-center py-8">
+    <div class="mb-4">
+        <i class="ph ph-chart-polar text-muted" style="font-size: 48px;"></i>
+    </div>
+    <h2 class="text-lg font-medium mb-2">Upload an employee dataset before using PCA.</h2>
+    <a href="{{ url_for('main.upload') }}" class="btn btn-primary mt-4">Upload Dataset</a>
+</div>
+{% elif not readiness.ready %}
+<div class="card text-center py-8">
+    <div class="mb-4">
+        <i class="ph ph-warning text-muted" style="font-size: 48px;"></i>
+    </div>
+    <h2 class="text-lg font-medium mb-2">{{ readiness.reason }}</h2>
+    <a href="{{ url_for('main.preprocessing') }}" class="btn btn-primary mt-4">Complete Preprocessing</a>
+</div>
+{% else %}
+
+<div class="grid grid-cols-1 lg-grid-cols-4 gap-6 mb-8">
+    
+    <!-- LEFT SIDE: Configuration -->
+    <div class="lg-col-span-1">
+        <div class="card mb-6">
+            <div class="card-header">
+                <h2 class="card-title">Preprocessing Status</h2>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item flex justify-between items-center">
+                        <span>Features Ready</span>
+                        <span class="font-bold">{{ readiness.features_count }}</span>
+                    </li>
+                    <li class="list-group-item flex justify-between items-center">
+                        <span>Training Samples</span>
+                        <span class="font-bold">{{ readiness.samples_count }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card bg-primary-light border-primary mb-6">
+            <div class="card-body">
+                <h3 class="text-sm font-bold text-primary mb-2">PCA WORKFLOW</h3>
+                <div class="flex flex-col gap-2 text-sm text-gray-700">
+                    <div class="flex items-center gap-2"><i class="ph ph-arrow-right text-primary"></i> 1. Identify Features</div>
+                    <div class="flex items-center gap-2"><i class="ph ph-arrow-right text-primary"></i> 2. Separate Target</div>
+                    <div class="flex items-center gap-2"><i class="ph ph-arrow-right text-primary"></i> 3. Use Preprocessed Data</div>
+                    <div class="flex items-center gap-2"><i class="ph ph-arrow-right text-primary"></i> 4. Apply PCA</div>
+                    <div class="flex items-center gap-2"><i class="ph ph-arrow-right text-primary"></i> 5. Analyze Variance</div>
+                    <div class="flex items-center gap-2"><i class="ph ph-arrow-right text-primary"></i> 6. Select Components</div>
+                    <div class="flex items-center gap-2 font-bold text-primary-dark mt-2"><i class="ph ph-check-circle"></i> Feature Reduced</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">PCA Configuration</h2>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-4">
+                    <label class="form-label font-bold">Variance Retention Target</label>
+                    <p class="text-xs text-muted mb-2">Retain enough components to preserve this percentage of variance.</p>
+                    <select id="variance-threshold" class="form-control">
+                        <option value="0.85">85%</option>
+                        <option value="0.90" selected>90%</option>
+                        <option value="0.95">95%</option>
+                        <option value="0.99">99%</option>
+                    </select>
+                </div>
+                <button type="button" class="btn btn-primary w-full" id="btn-run-pca">
+                    <i class="ph ph-play"></i> Run PCA
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- RIGHT SIDE: Results -->
+    <div class="lg-col-span-3">
+        
+        <!-- SECTION 1: Dataset & Feature Summary -->
+        <div class="card mb-6">
+            <div class="card-header bg-gray-50">
+                <h2 class="card-title">Step 1 — Identify Modeling Features</h2>
+            </div>
+            <div class="card-body">
+                <div class="grid grid-cols-2 md-grid-cols-3 gap-4 mb-6" id="feature-summary-cards">
+                    <div class="bg-gray-100 p-4 rounded text-center">
+                        <div class="text-2xl font-bold text-primary" id="summary-dataset-cols">-</div>
+                        <div class="text-sm text-muted">Dataset Columns</div>
+                    </div>
+                    <div class="bg-gray-100 p-4 rounded text-center">
+                        <div class="text-2xl font-bold text-primary" id="summary-target">-</div>
+                        <div class="text-sm text-muted">Target</div>
+                    </div>
+                    <div class="bg-gray-100 p-4 rounded text-center">
+                        <div class="text-2xl font-bold text-primary" id="summary-modeling-feats">-</div>
+                        <div class="text-sm text-muted">Modeling Features</div>
+                    </div>
+                    <div class="bg-gray-100 p-4 rounded text-center">
+                        <div class="text-2xl font-bold text-warning" id="summary-excluded-feats">-</div>
+                        <div class="text-sm text-muted">Excluded Features</div>
+                    </div>
+                    <div class="bg-gray-100 p-4 rounded text-center">
+                        <div class="text-2xl font-bold text-primary" id="summary-num-feats">-</div>
+                        <div class="text-sm text-muted">Numerical Features</div>
+                    </div>
+                    <div class="bg-gray-100 p-4 rounded text-center">
+                        <div class="text-2xl font-bold text-primary" id="summary-cat-feats">-</div>
+                        <div class="text-sm text-muted">Categorical Features</div>
+                    </div>
+                </div>
+                
+                <h3 class="font-medium mb-3">Feature Screening</h3>
+                <div class="table-responsive">
+                    <table class="table w-full text-sm" id="feature-screening-table">
+                        <thead>
+                            <tr>
+                                <th>Feature</th>
+                                <th>Data Type</th>
+                                <th>Role</th>
+                                <th>Used for PCA?</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody id="feature-screening-tbody">
+                            <tr><td colspan="5" class="text-center text-muted">Click "Run PCA" to analyze features</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECTION 2: PCA Summary -->
+        <div class="card mb-6 hidden" id="pca-summary-section">
+            <div class="card-header bg-primary-light">
+                <h2 class="card-title text-primary">PCA Summary</h2>
+            </div>
+            <div class="card-body">
+                <div class="grid grid-cols-2 md-grid-cols-5 gap-4">
+                    <div class="bg-primary-light p-4 rounded text-center">
+                        <div class="text-2xl font-bold text-primary" id="pca-orig-feats">-</div>
+                        <div class="text-sm text-muted">Original Features</div>
+                    </div>
+                    <div class="bg-primary-light p-4 rounded text-center">
+                        <div class="text-2xl font-bold text-primary" id="pca-components">-</div>
+                        <div class="text-sm text-muted">Principal Components</div>
+                    </div>
+                    <div class="bg-success-light p-4 rounded text-center">
+                        <div class="text-2xl font-bold text-success-dark" id="pca-var-retained">-</div>
+                        <div class="text-sm text-muted">Variance Retained</div>
+                    </div>
+                    <div class="bg-warning-light p-4 rounded text-center">
+                        <div class="text-2xl font-bold text-warning-dark" id="pca-var-lost">-</div>
+                        <div class="text-sm text-muted">Variance Lost</div>
+                    </div>
+                    <div class="bg-info-light p-4 rounded text-center">
+                        <div class="text-2xl font-bold text-info-dark" id="pca-compression">-</div>
+                        <div class="text-sm text-muted">Compression</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECTION 3: Explained Variance -->
+        <div class="card mb-6 hidden" id="explained-variance-section">
+            <div class="card-header bg-gray-50">
+                <h2 class="card-title">Explained Variance by Principal Component</h2>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <canvas id="explained-variance-chart" height="300"></canvas>
+                </div>
+                <div class="mb-4">
+                    <canvas id="cumulative-variance-chart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECTION 4: Principal Components Table -->
+        <div class="card mb-6 hidden" id="components-table-section">
+            <div class="card-header bg-gray-50">
+                <h2 class="card-title">Principal Components</h2>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table w-full text-sm" id="components-table">
+                        <thead>
+                            <tr>
+                                <th>Component</th>
+                                <th>Explained Variance</th>
+                                <th>Explained Variance %</th>
+                                <th>Cumulative Variance %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="components-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECTION 5: Component Contributions -->
+        <div class="card mb-6 hidden" id="loadings-section">
+            <div class="card-header bg-gray-50 flex justify-between items-center">
+                <h2 class="card-title">Component Contributions (Loadings)</h2>
+                <select id="component-selector" class="form-control" style="width: auto;">
+                </select>
+            </div>
+            <div class="card-body">
+                <p class="text-sm text-muted mb-4">
+                    Loadings show how strongly each original processed feature contributes to a principal component.
+                    Positive and negative values indicate the direction of the feature's contribution.
+                </p>
+                <div class="table-responsive">
+                    <table class="table w-full text-sm" id="loadings-table">
+                        <thead>
+                            <tr>
+                                <th>Original Feature</th>
+                                <th>Loading</th>
+                                <th>|Loading|</th>
+                                <th>Contribution Direction</th>
+                            </tr>
+                        </thead>
+                        <tbody id="loadings-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECTION 6: 2D PCA Projection -->
+        <div class="card mb-6 hidden" id="projection-section">
+            <div class="card-header bg-gray-50 flex justify-between items-center">
+                <h2 class="card-title">2D PCA Projection</h2>
+                <div class="flex items-center gap-2">
+                    <label class="text-sm">Color by:</label>
+                    <select id="color-by" class="form-control" style="width: auto;">
+                        <option value="none">None</option>
+                        <option value="attrition" selected>Attrition</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="text-sm text-muted mb-4">
+                    <strong>Note:</strong> Attrition was not used to calculate the PCA components. It is shown only to help visualize how the existing target classes appear in the reduced feature space.
+                </p>
+                <div class="mb-4">
+                    <canvas id="pca-projection-chart" height="400"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECTION 7: ELI5 Explanations -->
+        <div class="card hidden" id="eli5-section">
+            <div class="card-header bg-gray-50">
+                <h2 class="card-title">Understanding PCA</h2>
+            </div>
+            <div class="card-body">
+                <div class="grid grid-cols-1 md-grid-cols-2 gap-4">
+                    <div class="bg-gray-50 p-4 rounded">
+                        <h3 class="font-bold text-primary mb-2"><i class="ph ph-lightbulb"></i> What is PCA?</h3>
+                        <p class="text-sm text-gray-700">
+                            PCA is a technique that reduces many related features into a smaller number of new components while trying to keep most of the information.
+                            Think of it like compressing a large collection of information into fewer summaries.
+                        </p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded">
+                        <h3 class="font-bold text-primary mb-2"><i class="ph ph-scales"></i> Why do we scale the data?</h3>
+                        <p class="text-sm text-gray-700">
+                            PCA looks at variation in the data. If one feature uses much larger numbers than another, it can dominate the calculation.
+                            Scaling puts features on a comparable scale before PCA.
+                        </p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded">
+                        <h3 class="font-bold text-primary mb-2"><i class="ph ph-chart-bar"></i> What does "explained variance" mean?</h3>
+                        <p class="text-sm text-gray-700">
+                            It tells us how much of the information/variation in the original data is represented by each principal component.
+                            A higher percentage means that component captures more of the variation.
+                        </p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded">
+                        <h3 class="font-bold text-primary mb-2"><i class="ph ph-list-plus"></i> What are loadings?</h3>
+                        <p class="text-sm text-gray-700">
+                            Loadings show how strongly each original processed feature contributes to a principal component.
+                            A larger absolute loading means a stronger contribution.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/pca.js') }}"></script>
+{% endblock %}

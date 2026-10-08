@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import numpy as np
 from datetime import datetime
+import traceback
 
 main_bp = Blueprint('main', __name__)
 
@@ -282,7 +283,7 @@ from services import visualization_service
 def visualization():
     dataset_state = session.get('dataset', {'loaded': False})
     if not dataset_state.get('loaded'):
-        return render_template('visualization.html', dataset=dataset_state)
+        return render_template('visualization.html', dataset=dataset_state, filter_options={})
     
     filepath = dataset_state.get('stored_filepath')
     file_type = dataset_state.get('file_type')
@@ -290,7 +291,7 @@ def visualization():
     df, load_error = dataset_service.load_dataset(filepath, file_type)
     if load_error:
         flash(load_error, 'danger')
-        return render_template('visualization.html', dataset={'loaded': False})
+        return render_template('visualization.html', dataset={'loaded': False}, filter_options={})
         
     columns = list(df.columns)
     num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
@@ -461,7 +462,90 @@ def preprocessing_apply():
     return jsonify(result)
 
 
+from services import pca_service
+
+@main_bp.route('/pca')
+def pca():
+    dataset_state = session.get('dataset', {'loaded': False})
+    if not dataset_state.get('loaded'):
+        return render_template('pca.html', dataset=dataset_state)
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    pca_dir = os.path.join(os.path.dirname(upload_folder), 'pca')
+    
+    readiness = pca_service.check_pca_readiness(processed_dir)
+    preprocessing_state = session.get('preprocessing_state', None)
+    
+    return render_template('pca.html', dataset=dataset_state, readiness=readiness, preprocessing_state=preprocessing_state)
+
+@main_bp.route('/pca/features', methods=['POST'])
+def pca_features():
+    """Returns feature screening information."""
+    dataset_state = session.get('dataset')
+    if not dataset_state or not dataset_state.get('loaded'):
+        return jsonify({"error": "No dataset loaded"})
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    
+    target_col = dataset_state.get('targets', {}).get('classification', {}).get('name', 'Attrition')
+    result = pca_service.identify_modeling_features(processed_dir, target_col)
+    
+    return jsonify(result)
+
+@main_bp.route('/pca/apply', methods=['POST'])
+def pca_apply():
+    """Applies PCA to the preprocessed data."""
+    try:
+        dataset_state = session.get('dataset')
+        if not dataset_state or not dataset_state.get('loaded'):
+            return jsonify({"success": False, "error": "No dataset loaded"})
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "Invalid request."})
+        
+        variance_threshold = float(data.get('variance_threshold', 0.90))
+        
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+        processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+        pca_dir = os.path.join(os.path.dirname(upload_folder), 'pca')
+        
+        # Check readiness
+        readiness = pca_service.check_pca_readiness(processed_dir)
+        if not readiness.get('ready'):
+            return jsonify({"success": False, "error": readiness.get('reason')})
+        
+        result = pca_service.apply_pca(processed_dir, pca_dir, variance_threshold)
+        
+        if result.get("success"):
+            session['pca_state'] = {
+                'timestamp': datetime.now().isoformat(),
+                'variance_threshold': variance_threshold
+            }
+        
+        return jsonify(result)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": f"PCA failed: {str(e)}"})
+
+@main_bp.route('/pca/results', methods=['POST'])
+def pca_results():
+    """Returns previously computed PCA results."""
+    dataset_state = session.get('dataset')
+    if not dataset_state or not dataset_state.get('loaded'):
+        return jsonify({"error": "No dataset loaded"})
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    pca_dir = os.path.join(os.path.dirname(upload_folder), 'pca')
+    
+    result = pca_service.get_pca_results(pca_dir)
+    return jsonify(result)
+
+
 from services import model_training_service
+from services import unsupervised_service
 
 @main_bp.route('/training')
 def training():
@@ -519,8 +603,345 @@ def training_train():
 
 @main_bp.route('/evaluation')
 def evaluation():
-    return render_template('placeholders/evaluation.html')
+    """Model Evaluation page - Phase 6."""
+    dataset_state = session.get('dataset', {'loaded': False})
+    if not dataset_state.get('loaded'):
+        return render_template('evaluation.html', dataset=dataset_state)
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    models_dir = os.path.join(os.path.dirname(upload_folder), 'models')
+    pca_dir = os.path.join(os.path.dirname(upload_folder), 'pca')
+    
+    # Check evaluation readiness
+    from services import evaluation_service
+    readiness = evaluation_service.check_evaluation_readiness(processed_dir, models_dir)
+    
+    return render_template(
+        'evaluation.html',
+        dataset=dataset_state,
+        readiness=readiness
+    )
+
+
+@main_bp.route('/evaluation/model', methods=['POST'])
+def evaluate_model():
+    """Evaluate a specific model on the test set."""
+    dataset_state = session.get('dataset')
+    if not dataset_state or not dataset_state.get('loaded'):
+        return jsonify({"error": "No dataset loaded"})
+    
+    req = request.get_json()
+    if not req:
+        return jsonify({"error": "Invalid request"})
+    
+    model_name = req.get('model_name')
+    model_type = req.get('model_type', 'classification')  # 'classification' or 'regression'
+    
+    if not model_name:
+        return jsonify({"error": "Model name is required"})
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    models_dir = os.path.join(os.path.dirname(upload_folder), 'models')
+    pca_dir = os.path.join(os.path.dirname(upload_folder), 'pca')
+    
+    from services import evaluation_service
+    
+    if model_type == 'regression':
+        result = evaluation_service.evaluate_regression_model(model_name, processed_dir, models_dir)
+    else:
+        result = evaluation_service.evaluate_classification_model(model_name, processed_dir, models_dir, pca_dir)
+    
+    return jsonify(result)
+
+
+@main_bp.route('/evaluation/compare', methods=['POST'])
+def compare_models():
+    """Evaluate all available models for comparison."""
+    dataset_state = session.get('dataset')
+    if not dataset_state or not dataset_state.get('loaded'):
+        return jsonify({"error": "No dataset loaded"})
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    models_dir = os.path.join(os.path.dirname(upload_folder), 'models')
+    pca_dir = os.path.join(os.path.dirname(upload_folder), 'pca')
+    
+    from services import evaluation_service
+    result = evaluation_service.evaluate_all_models(processed_dir, models_dir, pca_dir)
+    
+    return jsonify(result)
+
+# Phase 8: Employee Prediction
 
 @main_bp.route('/predict')
 def predict():
-    return render_template('placeholders/prediction.html')
+    """Employee Prediction page - Phase 8."""
+    dataset_state = session.get('dataset', {'loaded': False})
+    if not dataset_state.get('loaded'):
+        return render_template('prediction.html', dataset=dataset_state)
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    models_dir = os.path.join(os.path.dirname(upload_folder), 'models')
+    
+    # Check prediction readiness
+    from services import prediction_service
+    readiness = prediction_service.check_prediction_readiness(processed_dir, models_dir)
+    
+    # Get categorical values for dropdowns
+    categorical_values = prediction_service.get_categorical_values(upload_folder)
+    
+    # Get ordinal mappings
+    ordinal_mappings = prediction_service.get_ordinal_mappings()
+    
+    return render_template(
+        'prediction.html',
+        dataset=dataset_state,
+        readiness=readiness,
+        categorical_values=categorical_values,
+        ordinal_mappings=ordinal_mappings
+    )
+
+
+@main_bp.route('/predict/predict', methods=['POST'])
+def predict_employee():
+    """Predict attrition for an employee."""
+    dataset_state = session.get('dataset')
+    if not dataset_state or not dataset_state.get('loaded'):
+        return jsonify({"error": "No dataset loaded"})
+    
+    req = request.get_json()
+    if not req:
+        return jsonify({"error": "Invalid request"})
+    
+    employee_data = req.get('employee_data')
+    if not employee_data:
+        return jsonify({"error": "Employee data is required"})
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    models_dir = os.path.join(os.path.dirname(upload_folder), 'models')
+    
+    from services import prediction_service
+    result = prediction_service.predict_attrition(employee_data, processed_dir, models_dir)
+    
+    return jsonify(result)
+
+
+# Phase 9: Project Summary & Review
+
+@main_bp.route('/project-summary')
+def project_summary():
+    """Project Summary & Review Dashboard - Phase 9."""
+    dataset_state = session.get('dataset', {'loaded': False})
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    models_dir = os.path.join(os.path.dirname(upload_folder), 'models')
+    pca_dir = os.path.join(os.path.dirname(upload_folder), 'pca')
+    unsupervised_dir = os.path.join(os.path.dirname(upload_folder), 'unsupervised')
+    
+    from services import project_summary_service
+    summary = project_summary_service.get_project_summary(upload_folder, processed_dir, models_dir, pca_dir, unsupervised_dir)
+    
+    return render_template('project_summary.html', summary=summary, dataset=dataset_state)
+
+
+# Phase 7: 5-Fold Cross Validation
+
+@main_bp.route('/cross-validation')
+def cross_validation():
+    """5-Fold Cross Validation page - Phase 7."""
+    dataset_state = session.get('dataset', {'loaded': False})
+    if not dataset_state.get('loaded'):
+        return render_template('cross_validation.html', dataset=dataset_state)
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    models_dir = os.path.join(os.path.dirname(upload_folder), 'models')
+    
+    # Check CV readiness
+    from services import cross_validation_service
+    readiness = cross_validation_service.check_cv_readiness(processed_dir)
+    
+    return render_template(
+        'cross_validation.html',
+        dataset=dataset_state,
+        readiness=readiness
+    )
+
+
+@main_bp.route('/cross-validation/run', methods=['POST'])
+def run_cross_validation():
+    """Run 5-fold cross-validation for a specific model."""
+    dataset_state = session.get('dataset')
+    if not dataset_state or not dataset_state.get('loaded'):
+        return jsonify({"error": "No dataset loaded"})
+    
+    req = request.get_json()
+    if not req:
+        return jsonify({"error": "Invalid request"})
+    
+    model_name = req.get('model_name')
+    n_splits = int(req.get('n_splits', 5))
+    random_state = int(req.get('random_state', 42))
+    
+    if not model_name:
+        return jsonify({"error": "Model name is required"})
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    models_dir = os.path.join(os.path.dirname(upload_folder), 'models')
+    
+    from services import cross_validation_service
+    result = cross_validation_service.run_cross_validation(model_name, processed_dir, models_dir, n_splits, random_state)
+    
+    return jsonify(result)
+
+
+@main_bp.route('/cross-validation/compare', methods=['POST'])
+def compare_cv_models():
+    """Run 5-fold cross-validation for all models and compare."""
+    dataset_state = session.get('dataset')
+    if not dataset_state or not dataset_state.get('loaded'):
+        return jsonify({"error": "No dataset loaded"})
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    models_dir = os.path.join(os.path.dirname(upload_folder), 'models')
+    
+    from services import cross_validation_service
+    result = cross_validation_service.run_all_models_cv(processed_dir, models_dir)
+    
+    return jsonify(result)
+
+
+# New Phase 5 routes for extended ML functionality
+
+@main_bp.route('/ml')
+def ml():
+    """Main Machine Learning page with supervised and unsupervised tabs."""
+    dataset_state = session.get('dataset', {'loaded': False})
+    if not dataset_state.get('loaded'):
+        return render_template('ml.html', dataset=dataset_state)
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    pca_dir = os.path.join(os.path.dirname(upload_folder), 'pca')
+    
+    # Check readiness for both supervised and unsupervised
+    supervised_readiness = model_training_service.check_training_readiness(processed_dir)
+    unsupervised_readiness = unsupervised_service.check_unsupervised_readiness(processed_dir, pca_dir)
+    
+    training_state = session.get('training_state', None)
+    
+    return render_template(
+        'ml.html',
+        dataset=dataset_state,
+        supervised_readiness=supervised_readiness,
+        unsupervised_readiness=unsupervised_readiness,
+        training_state=training_state
+    )
+
+
+@main_bp.route('/ml/regression/train', methods=['POST'])
+def ml_regression_train():
+    """Train Linear Regression for YearsAtCompany prediction."""
+    dataset_state = session.get('dataset')
+    if not dataset_state or not dataset_state.get('loaded'):
+        return jsonify({"error": "No dataset loaded"})
+    
+    req = request.get_json()
+    if not req:
+        return jsonify({"error": "Invalid request."})
+    
+    target_col = req.get('target_col', 'YearsAtCompany')
+    random_state = int(req.get('random_state', 42))
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    models_dir = os.path.join(os.path.dirname(upload_folder), 'models')
+    
+    result = model_training_service.train_regression_model(target_col, processed_dir, models_dir, random_state)
+    
+    if result.get("success"):
+        session['regression_state'] = {
+            'timestamp': datetime.now().isoformat(),
+            'target': target_col
+        }
+    
+    return jsonify(result)
+
+
+@main_bp.route('/ml/unsupervised/kmeans', methods=['POST'])
+def ml_unsupervised_kmeans():
+    """Run K-Means clustering."""
+    dataset_state = session.get('dataset')
+    if not dataset_state or not dataset_state.get('loaded'):
+        return jsonify({"error": "No dataset loaded"})
+    
+    req = request.get_json()
+    if not req:
+        return jsonify({"error": "Invalid request."})
+    
+    n_clusters = int(req.get('n_clusters', 3))
+    use_pca = req.get('use_pca', False)
+    random_state = int(req.get('random_state', 42))
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    pca_dir = os.path.join(os.path.dirname(upload_folder), 'pca')
+    
+    result = unsupervised_service.run_kmeans(processed_dir, pca_dir, n_clusters, use_pca, random_state)
+    
+    return jsonify(result)
+
+
+@main_bp.route('/ml/unsupervised/dbscan', methods=['POST'])
+def ml_unsupervised_dbscan():
+    """Run DBSCAN clustering."""
+    dataset_state = session.get('dataset')
+    if not dataset_state or not dataset_state.get('loaded'):
+        return jsonify({"error": "No dataset loaded"})
+    
+    req = request.get_json()
+    if not req:
+        return jsonify({"error": "Invalid request."})
+    
+    eps = float(req.get('eps', 0.5))
+    min_samples = int(req.get('min_samples', 5))
+    use_pca = req.get('use_pca', False)
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    pca_dir = os.path.join(os.path.dirname(upload_folder), 'pca')
+    
+    result = unsupervised_service.run_dbscan(processed_dir, pca_dir, eps, min_samples, use_pca)
+    
+    return jsonify(result)
+
+
+@main_bp.route('/ml/unsupervised/anomaly', methods=['POST'])
+def ml_unsupervised_anomaly():
+    """Run Isolation Forest anomaly detection."""
+    dataset_state = session.get('dataset')
+    if not dataset_state or not dataset_state.get('loaded'):
+        return jsonify({"error": "No dataset loaded"})
+    
+    req = request.get_json()
+    if not req:
+        return jsonify({"error": "Invalid request."})
+    
+    contamination = float(req.get('contamination', 0.1))
+    use_pca = req.get('use_pca', False)
+    random_state = int(req.get('random_state', 42))
+    
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/uploads')
+    processed_dir = os.path.join(os.path.dirname(upload_folder), 'processed')
+    pca_dir = os.path.join(os.path.dirname(upload_folder), 'pca')
+    
+    result = unsupervised_service.run_isolation_forest(processed_dir, pca_dir, contamination, use_pca, random_state)
+    
+    return jsonify(result)

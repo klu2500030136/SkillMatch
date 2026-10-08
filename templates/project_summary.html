@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+
+{% block title %}Project Summary{% endblock %}
+{% block breadcrumb %}Project Summary{% endblock %}
+
+{% block content %}
+<div class="page-header mb-6">
+    <h1 class="page-title">SkillMatch</h1>
+    <p class="page-subtitle text-muted">Employee Intelligence & Attrition Analysis</p>
+</div>
+
+<!-- PROJECT OVERVIEW -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">Project Overview</h3>
+        <p class="text-muted mb-4">
+            SkillMatch is an employee intelligence and machine learning application developed using the IBM HR Analytics Employee Attrition & Performance dataset. 
+            The system provides an end-to-end workflow for dataset exploration, missing-value analysis, preprocessing, feature identification using PCA, 
+            supervised and unsupervised machine learning, model evaluation, 5-fold cross-validation, and employee-level attrition prediction.
+        </p>
+        <div class="grid grid-cols-4 gap-4">
+            <div class="stat-box">
+                <div class="stat-label">Dataset</div>
+                <div class="stat-value">IBM HR Analytics</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Primary Target</div>
+                <div class="stat-value">Attrition</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Secondary Target</div>
+                <div class="stat-value">YearsAtCompany</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Cross Validation</div>
+                <div class="stat-value">5-Fold Stratified</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DATASET SUMMARY -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">Dataset Summary</h3>
+        {% if summary.dataset.status == 'COMPLETED' %}
+        <div class="grid grid-cols-4 gap-4">
+            <div class="stat-box">
+                <div class="stat-label">Rows</div>
+                <div class="stat-value">{{ summary.dataset.rows }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Columns</div>
+                <div class="stat-value">{{ summary.dataset.columns }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Target</div>
+                <div class="stat-value">{{ summary.dataset.target }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Status</div>
+                <div class="stat-value text-success">✓ Loaded</div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <p class="text-muted mb-4">No dataset currently loaded.</p>
+            <a href="/upload" class="btn btn-primary">Upload Dataset</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- COMPLETE PIPELINE -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">Complete ML Pipeline</h3>
+        <div class="pipeline-container">
+            <div class="pipeline-step" onclick="window.location.href='/upload'">
+                <div class="step-number">01</div>
+                <div class="step-title">Dataset</div>
+                <div class="step-status status-{{ summary.phases.dataset.status }}">
+                    {% if summary.phases.dataset.status == 'COMPLETED' %}✓{% elif summary.phases.dataset.status == 'READY' %}●{% else %}○{% endif %}
+                </div>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step" onclick="window.location.href='/analyse'">
+                <div class="step-number">02</div>
+                <div class="step-title">EDA</div>
+                <div class="step-status status-{{ summary.phases.eda.status }}">
+                    {% if summary.phases.eda.status == 'COMPLETED' %}✓{% elif summary.phases.eda.status == 'READY' %}●{% else %}○{% endif %}
+                </div>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step" onclick="window.location.href='/preprocessing'">
+                <div class="step-number">03</div>
+                <div class="step-title">Preprocessing</div>
+                <div class="step-status status-{{ summary.phases.preprocessing.status }}">
+                    {% if summary.phases.preprocessing.status == 'COMPLETED' %}✓{% elif summary.phases.preprocessing.status == 'READY' %}●{% else %}○{% endif %}
+                </div>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step" onclick="window.location.href='/pca'">
+                <div class="step-number">04</div>
+                <div class="step-title">PCA</div>
+                <div class="step-status status-{{ summary.phases.pca.status }}">
+                    {% if summary.phases.pca.status == 'COMPLETED' %}✓{% elif summary.phases.pca.status == 'READY' %}●{% else %}○{% endif %}
+                </div>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step" onclick="window.location.href='/ml'">
+                <div class="step-number">05</div>
+                <div class="step-title">Machine Learning</div>
+                <div class="step-status status-{{ summary.phases.ml.status }}">
+                    {% if summary.phases.ml.status == 'COMPLETED' %}✓{% elif summary.phases.ml.status == 'READY' %}●{% else %}○{% endif %}
+                </div>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step" onclick="window.location.href='/evaluation'">
+                <div class="step-number">06</div>
+                <div class="step-title">Evaluation</div>
+                <div class="step-status status-{{ summary.phases.evaluation.status }}">
+                    {% if summary.phases.evaluation.status == 'COMPLETED' %}✓{% elif summary.phases.evaluation.status == 'READY' %}●{% else %}○{% endif %}
+                </div>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step" onclick="window.location.href='/cross-validation'">
+                <div class="step-number">07</div>
+                <div class="step-title">5-Fold CV</div>
+                <div class="step-status status-{{ summary.phases.cross_validation.status }}">
+                    {% if summary.phases.cross_validation.status == 'COMPLETED' %}✓{% elif summary.phases.cross_validation.status == 'READY' %}●{% else %}○{% endif %}
+                </div>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step" onclick="window.location.href='/predict'">
+                <div class="step-number">08</div>
+                <div class="step-title">Prediction</div>
+                <div class="step-status status-{{ summary.phases.prediction.status }}">
+                    {% if summary.phases.prediction.status == 'COMPLETED' %}✓{% elif summary.phases.prediction.status == 'READY' %}●{% else %}○{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PHASE STATUS GRID -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">Phase Status</h3>
+        <div class="grid grid-cols-3 gap-4">
+            <div class="phase-card" onclick="window.location.href='/'">
+                <div class="phase-header">
+                    <span class="phase-num">00</span>
+                    <span class="phase-name">Foundation</span>
+                </div>
+                <div class="phase-status status-{{ summary.phases.foundation.status }}">
+                    {% if summary.phases.foundation.status == 'COMPLETED' %}✓ COMPLETED{% elif summary.phases.foundation.status == 'READY' %}● READY{% else %}○ NOT STARTED{% endif %}
+                </div>
+                <p class="phase-desc">Application structure, Flask backend, shared UI, navigation, and project architecture.</p>
+            </div>
+            <div class="phase-card" onclick="window.location.href='/upload'">
+                <div class="phase-header">
+                    <span class="phase-num">01</span>
+                    <span class="phase-name">Dataset</span>
+                </div>
+                <div class="phase-status status-{{ summary.phases.dataset.status }}">
+                    {% if summary.phases.dataset.status == 'COMPLETED' %}✓ COMPLETED{% elif summary.phases.dataset.status == 'READY' %}● READY{% else %}○ NOT STARTED{% endif %}
+                </div>
+                <p class="phase-desc">Upload, inspect, and understand the dataset structure.</p>
+            </div>
+            <div class="phase-card" onclick="window.location.href='/analyse'">
+                <div class="phase-header">
+                    <span class="phase-num">02</span>
+                    <span class="phase-name">EDA</span>
+                </div>
+                <div class="phase-status status-{{ summary.phases.eda.status }}">
+                    {% if summary.phases.eda.status == 'COMPLETED' %}✓ COMPLETED{% elif summary.phases.eda.status == 'READY' %}● READY{% else %}○ NOT STARTED{% endif %}
+                </div>
+                <p class="phase-desc">Explore feature distributions, relationships, correlations, and HR-specific questions.</p>
+            </div>
+            <div class="phase-card" onclick="window.location.href='/preprocessing'">
+                <div class="phase-header">
+                    <span class="phase-num">03</span>
+                    <span class="phase-name">Preprocessing</span>
+                </div>
+                <div class="phase-status status-{{ summary.phases.preprocessing.status }}">
+                    {% if summary.phases.preprocessing.status == 'COMPLETED' %}✓ COMPLETED{% elif summary.phases.preprocessing.status == 'READY' %}● READY{% else %}○ NOT STARTED{% endif %}
+                </div>
+                <p class="phase-desc">Identify missing values and prepare data for machine learning.</p>
+            </div>
+            <div class="phase-card" onclick="window.location.href='/pca'">
+                <div class="phase-header">
+                    <span class="phase-num">04</span>
+                    <span class="phase-name">PCA</span>
+                </div>
+                <div class="phase-status status-{{ summary.phases.pca.status }}">
+                    {% if summary.phases.pca.status == 'COMPLETED' %}✓ COMPLETED{% elif summary.phases.pca.status == 'READY' %}● READY{% else %}○ NOT STARTED{% endif %}
+                </div>
+                <p class="phase-desc">Identify modeling features and analyze dimensionality using Principal Component Analysis.</p>
+            </div>
+            <div class="phase-card" onclick="window.location.href='/ml'">
+                <div class="phase-header">
+                    <span class="phase-num">05</span>
+                    <span class="phase-name">Machine Learning</span>
+                </div>
+                <div class="phase-status status-{{ summary.phases.ml.status }}">
+                    {% if summary.phases.ml.status == 'COMPLETED' %}✓ COMPLETED{% elif summary.phases.ml.status == 'READY' %}● READY{% else %}○ NOT STARTED{% endif %}
+                </div>
+                <p class="phase-desc">Supervised and unsupervised machine learning techniques.</p>
+            </div>
+            <div class="phase-card" onclick="window.location.href='/evaluation'">
+                <div class="phase-header">
+                    <span class="phase-num">06</span>
+                    <span class="phase-name">Evaluation</span>
+                </div>
+                <div class="phase-status status-{{ summary.phases.evaluation.status }}">
+                    {% if summary.phases.evaluation.status == 'COMPLETED' %}✓ COMPLETED{% elif summary.phases.evaluation.status == 'READY' %}● READY{% else %}○ NOT STARTED{% endif %}
+                </div>
+                <p class="phase-desc">Evaluate trained models using classification metrics and confusion matrices.</p>
+            </div>
+            <div class="phase-card" onclick="window.location.href='/cross-validation'">
+                <div class="phase-header">
+                    <span class="phase-num">07</span>
+                    <span class="phase-name">5-Fold CV</span>
+                </div>
+                <div class="phase-status status-{{ summary.phases.cross_validation.status }}">
+                    {% if summary.phases.cross_validation.status == 'COMPLETED' %}✓ COMPLETED{% elif summary.phases.cross_validation.status == 'READY' %}● READY{% else %}○ NOT STARTED{% endif %}
+                </div>
+                <p class="phase-desc">Evaluate model consistency across five validation folds.</p>
+            </div>
+            <div class="phase-card" onclick="window.location.href='/predict'">
+                <div class="phase-header">
+                    <span class="phase-num">08</span>
+                    <span class="phase-name">Prediction</span>
+                </div>
+                <div class="phase-status status-{{ summary.phases.prediction.status }}">
+                    {% if summary.phases.prediction.status == 'COMPLETED' %}✓ COMPLETED{% elif summary.phases.prediction.status == 'READY' %}● READY{% else %}○ NOT STARTED{% endif %}
+                </div>
+                <p class="phase-desc">Enter employee information and generate an attrition prediction.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODEL INVENTORY -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">Model Inventory</h3>
+        <div class="grid grid-cols-2 gap-6">
+            <div>
+                <h4 class="text-lg font-medium mb-3">Supervised Learning</h4>
+                <p class="text-sm text-muted mb-3">Uses known target values during training.</p>
+                <ul class="model-list">
+                    {% for model in summary.models.supervised %}
+                    <li class="model-item">
+                        <span class="model-name">{{ model.name }}</span>
+                        <span class="model-status status-{{ model.status }}">
+                            {% if model.status == 'IMPLEMENTED' %}✓ Implemented{% else %}○ Available{% endif %}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-lg font-medium mb-3">Unsupervised Learning</h4>
+                <p class="text-sm text-muted mb-3">Looks for patterns without using Attrition as the target.</p>
+                <ul class="model-list">
+                    {% for model in summary.models.unsupervised %}
+                    <li class="model-item">
+                        <span class="model-name">{{ model.name }}</span>
+                        <span class="model-status status-{{ model.status }}">
+                            {% if model.status == 'IMPLEMENTED' %}✓ Implemented{% else %}○ Available{% endif %}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QUICK DEMO -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">Quick Demo</h3>
+        <p class="text-muted mb-4">Jump directly to any major component for demonstration.</p>
+        <div class="flex gap-3 flex-wrap">
+            <a href="/upload" class="btn btn-outline">View Dataset</a>
+            <a href="/analyse" class="btn btn-outline">View EDA</a>
+            <a href="/pca" class="btn btn-outline">View PCA</a>
+            <a href="/ml" class="btn btn-outline">View ML Models</a>
+            <a href="/evaluation" class="btn btn-outline">View Evaluation</a>
+            <a href="/cross-validation" class="btn btn-outline">View Cross Validation</a>
+            <a href="/predict" class="btn btn-outline">Make Prediction</a>
+        </div>
+    </div>
+</div>
+
+<!-- HOW SKILLMATCH WORKS -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">How SkillMatch Works</h3>
+        <ol class="workflow-list">
+            <li data-index="1"><strong>Dataset:</strong> The employee dataset is uploaded and inspected.</li>
+            <li data-index="2"><strong>EDA:</strong> Data distributions and relationships are explored.</li>
+            <li data-index="3"><strong>Missing Values & Preprocessing:</strong> Data is cleaned and transformed for machine learning.</li>
+            <li data-index="4"><strong>PCA & Feature Identification:</strong> Features are examined and dimensionality reduction is analyzed.</li>
+            <li data-index="5"><strong>Machine Learning:</strong> Supervised and unsupervised techniques are applied.</li>
+            <li data-index="6"><strong>Model Evaluation:</strong> Models are evaluated using appropriate metrics.</li>
+            <li data-index="7"><strong>5-Fold Cross Validation:</strong> Model performance is checked across multiple folds.</li>
+            <li data-index="8"><strong>Employee Prediction:</strong> A saved model is used to predict attrition for entered employee information.</li>
+        </ol>
+    </div>
+</div>
+
+<!-- TECHNOLOGY STACK -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">Technology Stack</h3>
+        <div class="tech-grid">
+            <div class="tech-item">
+                <div class="tech-label">Backend</div>
+                <div class="tech-value">{{ summary.technology.backend }}</div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-label">Data</div>
+                <div class="tech-value">{{ summary.technology.data | join(', ') }}</div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-label">ML</div>
+                <div class="tech-value">{{ summary.technology.ml }}</div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-label">Visualization</div>
+                <div class="tech-value">{{ summary.technology.visualization }}</div>
+            </div>
+            <div class="tech-item">
+                <div class="tech-label">Persistence</div>
+                <div class="tech-value">{{ summary.technology.persistence }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PROJECT ABSTRACT -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">Project Abstract</h3>
+        <p class="text-muted">
+            SkillMatch is an employee intelligence and machine learning application developed using the IBM HR Analytics Employee Attrition & Performance dataset. 
+            The system provides an end-to-end workflow for dataset exploration, missing-value analysis, preprocessing, feature identification using PCA, 
+            supervised and unsupervised machine learning, model evaluation, 5-fold cross-validation, and employee-level attrition prediction.
+        </p>
+    </div>
+</div>
+
+{% endblock %}

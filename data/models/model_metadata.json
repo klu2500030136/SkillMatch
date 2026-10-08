@@ -12,11 +12,11 @@
         "recall": 60.0,
         "f1": 55.26,
         "roc_auc": 80.19,
-        "training_time": 0.7548
+        "training_time": 0.8685
     },
     "random_state": 42,
     "training_rows": 1029,
     "validation_rows": 220,
     "feature_count": 51,
-    "trained_at": "2026-08-31T10:58:29.842852"
+    "trained_at": "2026-10-09T00:27:26.831168"
 }

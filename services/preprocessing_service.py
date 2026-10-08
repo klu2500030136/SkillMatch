@@ -26,6 +26,9 @@ def safe_json(val):
     if isinstance(val, (np.integer, int)):
         return int(val)
     if isinstance(val, (np.floating, float)):
+        # Handle infinity and NaN
+        if np.isinf(val) or np.isnan(val):
+            return None
         return round(float(val), 2)
     return str(val)
 
@@ -241,21 +244,39 @@ def apply_preprocessing(df, config, processed_dir):
         X_test_df.to_csv(os.path.join(processed_dir, 'X_test.csv'), index=False)
         y_test.to_csv(os.path.join(processed_dir, 'y_test.csv'), index=False)
         
+        # Save YearsAtCompany for regression if it exists
+        regression_target_available = False
+        if 'YearsAtCompany' in processed_df.columns:
+            # Use the original indices to match the split
+            y_train_years = processed_df.loc[X_train.index, 'YearsAtCompany']
+            y_val_years = processed_df.loc[X_val.index, 'YearsAtCompany']
+            y_test_years = processed_df.loc[X_test.index, 'YearsAtCompany']
+            y_train_years.to_csv(os.path.join(processed_dir, 'y_train_yearsatcompany.csv'), index=False)
+            y_val_years.to_csv(os.path.join(processed_dir, 'y_val_yearsatcompany.csv'), index=False)
+            y_test_years.to_csv(os.path.join(processed_dir, 'y_test_yearsatcompany.csv'), index=False)
+            regression_target_available = True
+        
         # Generate summary
+        summary_dict = {
+            "original_rows": original_rows,
+            "original_cols": original_cols,
+            "processed_rows": len(processed_df),
+            "processed_features": X_train_processed.shape[1],
+            "duplicates_removed": original_rows - len(processed_df),
+            "features_removed": len(features_to_remove),
+            "target": target_col,
+            "train_rows": len(X_train),
+            "val_rows": len(X_val),
+            "test_rows": len(X_test)
+        }
+        
+        if regression_target_available:
+            summary_dict["regression_target_available"] = True
+            summary_dict["regression_target"] = "YearsAtCompany"
+        
         return {
             "success": True,
-            "summary": {
-                "original_rows": original_rows,
-                "original_cols": original_cols,
-                "processed_rows": len(processed_df),
-                "processed_features": X_train_processed.shape[1],
-                "duplicates_removed": original_rows - len(processed_df),
-                "features_removed": len(features_to_remove),
-                "target": target_col,
-                "train_rows": len(X_train),
-                "val_rows": len(X_val),
-                "test_rows": len(X_test)
-            },
+            "summary": summary_dict,
             "preview_columns": feature_names[:50], # Limit preview columns
             "preview_data": X_train_df.head(5).round(4).to_dict('records'),
             "target_preview": y_train.head(5).tolist()

@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}5-Fold Cross Validation{% endblock %}
+{% block breadcrumb %}5-Fold Cross Validation{% endblock %}
+
+{% block content %}
+{% if not dataset.loaded %}
+<div class="page-header mb-6">
+    <h1 class="page-title">5-Fold Cross Validation</h1>
+    <p class="page-subtitle text-muted">Check how consistently each machine learning model performs across different training and validation splits.</p>
+</div>
+
+<div class="card text-center py-8">
+    <div class="mb-4">
+        <i class="ph ph-arrows-left-right text-muted" style="font-size: 48px;"></i>
+    </div>
+    <h2 class="text-lg font-medium mb-2">Upload a dataset first.</h2>
+    <a href="/upload" class="btn btn-primary mt-4">Upload Dataset</a>
+</div>
+
+{% else %}
+<div class="page-header mb-6">
+    <h1 class="page-title">5-Fold Cross Validation</h1>
+    <p class="page-subtitle text-muted">Check how consistently each machine learning model performs across different training and validation splits.</p>
+</div>
+
+{% if not readiness.ready %}
+<div class="card mb-6">
+    <div class="card-body">
+        <div class="flex items-center gap-3 mb-4">
+            <i class="ph ph-warning-circle text-warning" style="font-size: 32px;"></i>
+            <div>
+                <h3 class="text-lg font-medium">Cross Validation Not Ready</h3>
+                <p class="text-muted">{{ readiness.reason }}</p>
+            </div>
+        </div>
+        <a href="/preprocessing" class="btn btn-primary">Complete Preprocessing</a>
+    </div>
+</div>
+
+{% else %}
+<!-- CV INTRODUCTION -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">What is 5-Fold Cross Validation?</h3>
+        <p class="text-muted mb-4">
+            Instead of training and checking a model only once, we divide the training data into five parts. The model is trained five times. Each time, one part is used for validation and the other four parts are used for training.
+        </p>
+        <div class="grid grid-cols-5 gap-2 mb-4">
+            <div class="fold-visual" style="background-color: rgba(58, 175, 169, 0.1); border: 2px solid #3AAFA9;">
+                <div class="text-center py-2">
+                    <div class="font-bold text-primary">Fold 1</div>
+                    <div class="text-xs">Train: F2-F5</div>
+                    <div class="text-xs">Val: F1</div>
+                </div>
+            </div>
+            <div class="fold-visual" style="background-color: rgba(58, 175, 169, 0.1); border: 2px solid #3AAFA9;">
+                <div class="text-center py-2">
+                    <div class="font-bold text-primary">Fold 2</div>
+                    <div class="text-xs">Train: F1,F3-F5</div>
+                    <div class="text-xs">Val: F2</div>
+                </div>
+            </div>
+            <div class="fold-visual" style="background-color: rgba(58, 175, 169, 0.1); border: 2px solid #3AAFA9;">
+                <div class="text-center py-2">
+                    <div class="font-bold text-primary">Fold 3</div>
+                    <div class="text-xs">Train: F1-F2,F4-F5</div>
+                    <div class="text-xs">Val: F3</div>
+                </div>
+            </div>
+            <div class="fold-visual" style="background-color: rgba(58, 175, 169, 0.1); border: 2px solid #3AAFA9;">
+                <div class="text-center py-2">
+                    <div class="font-bold text-primary">Fold 4</div>
+                    <div class="text-xs">Train: F1-F3,F5</div>
+                    <div class="text-xs">Val: F4</div>
+                </div>
+            </div>
+            <div class="fold-visual" style="background-color: rgba(58, 175, 169, 0.1); border: 2px solid #3AAFA9;">
+                <div class="text-center py-2">
+                    <div class="font-bold text-primary">Fold 5</div>
+                    <div class="text-xs">Train: F1-F4</div>
+                    <div class="text-xs">Val: F5</div>
+                </div>
+            </div>
+        </div>
+        <p class="text-sm text-muted">
+            <i class="ph ph-info"></i> Every training record gets a chance to be part of the validation set. This gives a more reliable estimate of model performance.
+        </p>
+    </div>
+</div>
+
+<!-- STATUS -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">Cross Validation Status</h3>
+        <div class="grid grid-cols-4 gap-4">
+            <div class="stat-box">
+                <div class="stat-label">Dataset</div>
+                <div class="stat-value">{{ dataset.filename }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Target</div>
+                <div class="stat-value">{{ readiness.target }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Training Samples</div>
+                <div class="stat-value">{{ readiness.train_rows }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Features</div>
+                <div class="stat-value">{{ readiness.features_count }}</div>
+            </div>
+        </div>
+        <div class="mt-4 text-sm text-muted">
+            <i class="ph ph-shield-check"></i> Cross-validation uses only the training dataset. The held-out test set from Phase 6 remains untouched.
+        </div>
+    </div>
+</div>
+
+<!-- MODEL SELECTION -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">Select Model</h3>
+        <div class="flex items-center gap-4">
+            <label class="text-sm font-medium">Model:</label>
+            <select id="model-selector" class="form-select" style="max-width: 300px;">
+                <option value="">-- Select a model --</option>
+                <option value="Logistic Regression">Logistic Regression</option>
+                <option value="Decision Tree">Decision Tree</option>
+                <option value="Random Forest">Random Forest</option>
+                <option value="K-Nearest Neighbors">K-Nearest Neighbors</option>
+                <option value="Support Vector Machine">Support Vector Machine</option>
+                <option value="Gradient Boosting">Gradient Boosting</option>
+            </select>
+            <button id="run-cv-btn" class="btn btn-primary" disabled>
+                <i class="ph ph-play"></i> Run 5-Fold CV
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- CV RESULTS -->
+<div id="cv-results" style="display: none;">
+    <!-- FOLD RESULTS TABLE -->
+    <div class="card mb-6">
+        <div class="card-body">
+            <h3 class="card-title mb-4">Fold-by-Fold Results</h3>
+            <div class="table-responsive">
+                <table class="data-table" id="fold-results-table">
+                    <thead>
+                        <tr>
+                            <th>Fold</th>
+                            <th>Accuracy</th>
+                            <th>Precision</th>
+                            <th>Recall</th>
+                            <th>F1-Score</th>
+                            <th>ROC-AUC</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fold-results-body">
+                        <!-- Filled by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUMMARY TABLE -->
+    <div class="card mb-6">
+        <div class="card-body">
+            <h3 class="card-title mb-4">Mean ± Standard Deviation</h3>
+            <div class="table-responsive">
+                <table class="data-table" id="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Statistic</th>
+                            <th>Accuracy</th>
+                            <th>Precision</th>
+                            <th>Recall</th>
+                            <th>F1-Score</th>
+                            <th>ROC-AUC</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summary-body">
+                        <!-- Filled by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODEL COMPARISON -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">Model Comparison</h3>
+        <button id="compare-cv-btn" class="btn btn-outline mb-4">
+            <i class="ph ph-arrows-left-right"></i> Compare All Models
+        </button>
+        <div id="cv-comparison-results" style="display: none;">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Mean Accuracy</th>
+                            <th>Mean Precision</th>
+                            <th>Mean Recall</th>
+                            <th>Mean F1-Score</th>
+                            <th>Mean ROC-AUC</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cv-comparison-body">
+                        <!-- Filled by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ELI5 EXPLANATION -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">In Simple Words</h3>
+        <p class="text-muted mb-4">
+            We split the training data into five parts. The model learns from four parts and is checked using the remaining part. We repeat this five times so every part gets a turn for validation. Finally, we calculate the average and variation of the results.
+        </p>
+        <div class="grid grid-cols-2 gap-4">
+            <div class="explanation-box">
+                <h4 class="font-medium mb-2">Mean</h4>
+                <p class="text-sm text-muted">Shows the average performance across the five folds.</p>
+            </div>
+            <div class="explanation-box">
+                <h4 class="font-medium mb-2">Standard Deviation</h4>
+                <p class="text-sm text-muted">Shows how much the model's performance changed from one fold to another.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+{% endif %}
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" style="display: none;">
+    <div class="loading-spinner">
+        <i class="ph ph-spinner ph-spin"></i>
+        <span>Running 5-fold cross validation...</span>
+    </div>
+</div>
+
+<script src="/static/js/cross_validation.js"></script>
+{% endblock %}

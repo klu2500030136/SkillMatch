@@ -19,6 +19,9 @@ def safe_json(val):
     if isinstance(val, (np.integer, int)):
         return int(val)
     if isinstance(val, (np.floating, float)):
+        # Handle infinity and NaN
+        if np.isinf(val) or np.isnan(val):
+            return None
         return round(float(val), 2)
     return str(val)
 

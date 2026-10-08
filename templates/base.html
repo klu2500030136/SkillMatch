@@ -92,19 +92,43 @@
             </div>
             
             <div class="nav-section">
+                <div class="nav-section-title">Feature Engineering</div>
+                <nav class="nav-list">
+                    <a href="{{ url_for('main.pca') }}" class="nav-item {% if request.endpoint == 'main.pca' %}active{% endif %}">
+                        <i class="ph ph-chart-polar"></i>
+                        <span class="nav-num text-xs text-muted mr-2">04</span> PCA & Feature Identification
+                    </a>
+                </nav>
+            </div>
+            
+            <div class="nav-section">
                 <div class="nav-section-title">Machine Learning</div>
                 <nav class="nav-list">
-                    <a href="{{ url_for('main.training') }}" class="nav-item {% if request.endpoint == 'main.training' %}active{% endif %}">
+                    <a href="{{ url_for('main.ml') }}" class="nav-item {% if request.endpoint == 'main.ml' %}active{% endif %}">
                         <i class="ph ph-brain"></i>
-                        <span class="nav-num text-xs text-muted mr-2">07</span> Model Training
+                        <span class="nav-num text-xs text-muted mr-2">05</span> Machine Learning
                     </a>
                     <a href="{{ url_for('main.evaluation') }}" class="nav-item {% if request.endpoint == 'main.evaluation' %}active{% endif %}">
                         <i class="ph ph-target"></i>
-                        <span class="nav-num text-xs text-muted mr-2">08</span> Model Evaluation
+                        <span class="nav-num text-xs text-muted mr-2">06</span> Model Evaluation
+                    </a>
+                    <a href="{{ url_for('main.cross_validation') }}" class="nav-item {% if request.endpoint == 'main.cross_validation' %}active{% endif %}">
+                        <i class="ph ph-arrows-left-right"></i>
+                        <span class="nav-num text-xs text-muted mr-2">07</span> 5-Fold Cross Validation
                     </a>
                     <a href="{{ url_for('main.predict') }}" class="nav-item {% if request.endpoint == 'main.predict' %}active{% endif %}">
                         <i class="ph ph-sparkle"></i>
-                        <span class="nav-num text-xs text-muted mr-2">09</span> Predict Employee
+                        <span class="nav-num text-xs text-muted mr-2">08</span> Employee Prediction
+                    </a>
+                </nav>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Project Review</div>
+                <nav class="nav-list">
+                    <a href="{{ url_for('main.project_summary') }}" class="nav-item {% if request.endpoint == 'main.project_summary' %}active{% endif %}">
+                        <i class="ph ph-clipboard-text"></i>
+                        <span class="nav-num text-xs text-muted mr-2">09</span> Project Summary
                     </a>
                 </nav>
             </div>

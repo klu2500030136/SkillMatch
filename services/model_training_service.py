@@ -7,12 +7,12 @@ import joblib
 from datetime import datetime
 import traceback
 
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, mean_absolute_error, mean_squared_error, r2_score
 
 def check_training_readiness(processed_dir):
     """Checks if Phase 6 artifacts exist."""
@@ -107,12 +107,14 @@ def get_model_instance(name, config, class_weight, random_state):
             max_depth=md,
             random_state=random_state
         )
+    elif name == 'Linear Regression':
+        return LinearRegression()
     else:
         raise ValueError(f"Unknown model name: {name}")
 
 def train_models(selected_models, config, class_weight, random_state, processed_dir, models_dir):
     """
-    Trains selected models on X_train/y_train, evaluates on X_val/y_val.
+    Trains selected classification models on X_train/y_train, evaluates on X_val/y_val.
     Saves best model and metadata to models_dir.
     """
     try:
@@ -176,6 +178,10 @@ def train_models(selected_models, config, class_weight, random_state, processed_
                     "roc_auc": round(roc_auc * 100, 2) if roc_auc is not None else "N/A",
                     "training_time": round(train_time, 4)
                 }
+                
+                # Save individual model for Phase 6 evaluation
+                safe_model_name = name.lower().replace(' ', '_').replace('-', '_')
+                joblib.dump(model, os.path.join(models_dir, f'{safe_model_name}_model.joblib'))
                 
                 # Track best model
                 # Primary: F1, Secondary: ROC_AUC (if available), Tertiary: Recall
@@ -249,3 +255,109 @@ def train_models(selected_models, config, class_weight, random_state, processed_
     except Exception as e:
         traceback.print_exc()
         return {"success": False, "error": f"Model training failed: {str(e)}"}
+
+
+def train_regression_model(target_col, processed_dir, models_dir, random_state=42):
+    """
+    Trains Linear Regression for predicting a continuous target (e.g., YearsAtCompany).
+    """
+    try:
+        # For YearsAtCompany, use the manually created files
+        if target_col == 'YearsAtCompany':
+            y_train_file = os.path.join(processed_dir, 'y_train_years.csv')
+            y_val_file = os.path.join(processed_dir, 'y_val_years.csv')
+        else:
+            # Try to find the file
+            y_train_file = os.path.join(processed_dir, f'y_train_{target_col.lower()}.csv')
+            y_val_file = os.path.join(processed_dir, f'y_val_{target_col.lower()}.csv')
+        
+        if not os.path.exists(y_train_file):
+            return {
+                "success": False,
+                "error": f"Regression target '{target_col}' not found in preprocessing artifacts. Please re-run preprocessing to generate regression targets."
+            }
+        
+        if not os.path.exists(y_val_file):
+            return {
+                "success": False,
+                "error": f"Regression validation target file not found. Please re-run preprocessing."
+            }
+        
+        # Load processed features
+        X_train = pd.read_csv(os.path.join(processed_dir, 'X_train.csv'))
+        X_val = pd.read_csv(os.path.join(processed_dir, 'X_val.csv'))
+        
+        # Load regression target
+        y_train = pd.read_csv(y_train_file).iloc[:, 0]
+        y_val = pd.read_csv(y_val_file).iloc[:, 0]
+        
+        # Remove target column from features if present (prevent data leakage)
+        if target_col in X_train.columns:
+            X_train = X_train.drop(columns=[target_col])
+        if target_col in X_val.columns:
+            X_val = X_val.drop(columns=[target_col])
+        
+        # Ensure indices match
+        y_train.index = X_train.index
+        y_val.index = X_val.index
+        
+        # Train Linear Regression
+        model = LinearRegression()
+        start_time = time.time()
+        model.fit(X_train, y_train)
+        train_time = time.time() - start_time
+        
+        # Predict
+        y_pred = model.predict(X_val)
+        
+        # Calculate regression metrics
+        mae = mean_absolute_error(y_val, y_pred)
+        mse = mean_squared_error(y_val, y_pred)
+        rmse = np.sqrt(mse)
+        r2 = r2_score(y_val, y_pred)
+        
+        # Save model
+        if not os.path.exists(models_dir):
+            os.makedirs(models_dir)
+        
+        joblib.dump(model, os.path.join(models_dir, 'linear_regression_model.joblib'))
+        
+        # Save metadata
+        metadata = {
+            "project": "SkillMatch",
+            "task": "regression",
+            "target": target_col,
+            "model": "Linear Regression",
+            "validation_metrics": {
+                "mae": round(mae, 4),
+                "mse": round(mse, 4),
+                "rmse": round(rmse, 4),
+                "r2": round(r2, 4)
+            },
+            "random_state": random_state,
+            "training_rows": len(X_train),
+            "validation_rows": len(X_val),
+            "feature_count": len(X_train.columns),
+            "trained_at": datetime.now().isoformat()
+        }
+        
+        with open(os.path.join(models_dir, 'linear_regression_metadata.json'), 'w') as f:
+            json.dump(metadata, f, indent=4)
+        
+        return {
+            "success": True,
+            "model": {
+                "name": "Linear Regression",
+                "status": "success",
+                "target": target_col,
+                "mae": round(mae, 4),
+                "mse": round(mse, 4),
+                "rmse": round(rmse, 4),
+                "r2": round(r2, 4),
+                "training_time": round(train_time, 4)
+            }
+        }
+        
+    except Exception as e:
+        traceback.print_exc()
+        return {"success": False, "error": f"Regression training failed: {str(e)}"}

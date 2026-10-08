@@ -1,0 +1,514 @@
+{% extends "base.html" %}
+
+{% block title %}Machine Learning - SkillMatch{% endblock %}
+{% block breadcrumb %}Machine Learning{% endblock %}
+
+{% block content %}
+<div class="page-header mb-6">
+    <h1 class="page-title">Machine Learning</h1>
+    <p class="page-subtitle text-muted">Train supervised models and discover employee patterns using unsupervised learning.</p>
+</div>
+
+{% if not dataset or not dataset.loaded %}
+<div class="card text-center py-8">
+    <div class="mb-4">
+        <i class="ph ph-brain text-muted" style="font-size: 48px;"></i>
+    </div>
+    <h2 class="text-lg font-medium mb-2">Upload a dataset first.</h2>
+    <a href="{{ url_for('main.upload') }}" class="btn btn-primary mt-4">Upload Dataset</a>
+</div>
+{% else %}
+
+<!-- Supervised vs Unsupervised Explanation -->
+<div class="grid grid-cols-1 md-grid-cols-2 gap-6 mb-8">
+    <div class="card bg-primary-light border-primary">
+        <div class="card-body">
+            <h3 class="text-lg font-bold text-primary mb-2"><i class="ph ph-target"></i> Supervised Learning</h3>
+            <p class="text-sm text-gray-700">
+                Uses data where the outcome is already known. The model learns the relationship between employee features and a target (e.g., Attrition).
+            </p>
+        </div>
+    </div>
+    <div class="card bg-info-light border-info">
+        <div class="card-body">
+            <h3 class="text-lg font-bold text-info-dark mb-2"><i class="ph ph-magnifying-glass"></i> Unsupervised Learning</h3>
+            <p class="text-sm text-gray-700">
+                Looks for patterns, groups, or unusual records without using a known target label. Useful for discovering hidden structures in the data.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Tab Navigation -->
+<div class="card mb-6">
+    <div class="card-body p-0">
+        <div class="flex border-b">
+            <button class="tab-btn px-6 py-3 font-medium border-b-2 border-primary text-primary" data-tab="supervised">
+                <i class="ph ph-target mr-2"></i> Supervised Learning
+            </button>
+            <button class="tab-btn px-6 py-3 font-medium border-b-2 border-transparent text-muted hover:text-primary" data-tab="unsupervised">
+                <i class="ph ph-magnifying-glass mr-2"></i> Unsupervised Learning
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- SUPERVISED LEARNING TAB -->
+<div id="tab-supervised" class="tab-content">
+    {% if not supervised_readiness.ready %}
+    <div class="card text-center py-8">
+        <div class="mb-4">
+            <i class="ph ph-gear text-muted" style="font-size: 48px;"></i>
+        </div>
+        <h2 class="text-lg font-medium mb-2">Preprocessing Required</h2>
+        <p class="text-muted mb-4">{{ supervised_readiness.reason }}</p>
+        <a href="{{ url_for('main.preprocessing') }}" class="btn btn-primary">Go to Preprocessing</a>
+    </div>
+    {% else %}
+    
+    <!-- Problem Type Selection -->
+    <div class="card mb-6">
+        <div class="card-header bg-gray-50">
+            <h2 class="card-title">Problem Type</h2>
+        </div>
+        <div class="card-body">
+            <div class="flex gap-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="problem_type" value="classification" checked>
+                    <span class="font-medium">Classification</span>
+                    <span class="text-sm text-muted">(Predict Attrition: Yes/No)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="problem_type" value="regression">
+                    <span class="font-medium">Regression</span>
+                    <span class="text-sm text-muted">(Predict YearsAtCompany)</span>
+                </label>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Classification Section -->
+    <div id="section-classification">
+        <div class="alert alert-info mb-6">
+            <strong class="block mb-1"><i class="ph ph-info"></i> Classification Models</strong>
+            <p class="text-sm">These models predict whether an employee will leave (Attrition: Yes/No).</p>
+        </div>
+        
+        <div class="mb-6">
+            <a href="{{ url_for('main.training') }}" class="btn btn-primary btn-lg">
+                <i class="ph ph-sliders"></i> Go to Model Training
+            </a>
+            <p class="text-sm text-muted mt-2">
+                The existing Model Training page provides full configuration for classification models including:
+                Logistic Regression, Decision Tree, Random Forest, KNN, SVM, and Gradient Boosting.
+            </p>
+        </div>
+        
+        <div class="card bg-gray-50">
+            <div class="card-body">
+                <h3 class="font-bold text-sm mb-3">Required Models for Instructor Review</h3>
+                <div class="flex flex-wrap gap-2">
+                    <span class="badge bg-success-light text-success-dark">✓ Logistic Regression</span>
+                    <span class="badge bg-success-light text-success-dark">✓ Decision Tree</span>
+                    <span class="badge bg-success-light text-success-dark">✓ Linear (via Regression tab)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Regression Section -->
+    <div id="section-regression" class="hidden">
+        <div class="alert alert-info mb-6">
+            <strong class="block mb-1"><i class="ph ph-info"></i> Linear Regression</strong>
+            <p class="text-sm">
+                Linear Regression predicts a numeric value. Because Attrition is Yes/No, we use YearsAtCompany as the regression target for this model.
+            </p>
+        </div>
+        
+        <div class="card mb-6">
+            <div class="card-header bg-gray-50">
+                <h2 class="card-title">Linear Regression Configuration</h2>
+            </div>
+            <div class="card-body">
+                <div class="grid grid-cols-1 md-grid-cols-2 gap-4 mb-4">
+                    <div class="form-group">
+                        <label class="form-label font-bold">Target Variable</label>
+                        <input type="text" class="form-control bg-gray-100" value="YearsAtCompany" readonly>
+                        <div class="text-xs text-muted mt-1">Continuous numeric target for regression</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Random State</label>
+                        <input type="number" id="regression-random-state" class="form-control" value="42">
+                    </div>
+                </div>
+                
+                <button type="button" class="btn btn-primary" id="btn-train-regression">
+                    <i class="ph ph-play"></i> Train Linear Regression
+                </button>
+            </div>
+        </div>
+        
+        <!-- Regression Results -->
+        <div id="regression-results" class="hidden">
+            <div class="card border-success mb-6">
+                <div class="card-header bg-success-light">
+                    <h2 class="card-title text-success-dark">Linear Regression Results</h2>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-2 md-grid-cols-4 gap-4 mb-4">
+                        <div class="bg-gray-100 p-3 rounded text-center">
+                            <div class="text-xl font-bold text-primary" id="reg-mae">-</div>
+                            <div class="text-sm text-muted">MAE</div>
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded text-center">
+                            <div class="text-xl font-bold text-primary" id="reg-mse">-</div>
+                            <div class="text-sm text-muted">MSE</div>
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded text-center">
+                            <div class="text-xl font-bold text-primary" id="reg-rmse">-</div>
+                            <div class="text-sm text-muted">RMSE</div>
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded text-center">
+                            <div class="text-xl font-bold text-primary" id="reg-r2">-</div>
+                            <div class="text-sm text-muted">R²</div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-success">
+                        <strong class="block mb-1"><i class="ph ph-check-circle"></i> Model Trained Successfully</strong>
+                        <p class="text-sm">Linear Regression model saved to artifacts. Ready for Phase 6 evaluation.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ELI5 -->
+        <div class="card bg-gray-50">
+            <div class="card-body">
+                <h3 class="font-bold text-sm mb-2"><i class="ph ph-lightbulb"></i> What is Linear Regression?</h3>
+                <p class="text-sm text-gray-700">
+                    Linear Regression learns how employee features are related to a numeric outcome and predicts a continuous value.
+                    It finds the best straight line that fits the relationship between features and the target.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- UNSUPERVISED LEARNING TAB -->
+<div id="tab-unsupervised" class="tab-content hidden">
+    {% if not unsupervised_readiness.ready %}
+    <div class="card text-center py-8">
+        <div class="mb-4">
+            <i class="ph ph-gear text-muted" style="font-size: 48px;"></i>
+        </div>
+        <h2 class="text-lg font-medium mb-2">Preprocessing Required</h2>
+        <p class="text-muted mb-4">{{ unsupervised_readiness.reason }}</p>
+        <a href="{{ url_for('main.preprocessing') }}" class="btn btn-primary">Go to Preprocessing</a>
+    </div>
+    {% else %}
+    
+    <div class="alert alert-warning mb-6">
+        <strong class="block mb-1"><i class="ph ph-warning"></i> Important Note</strong>
+        <p class="text-sm">
+            Unsupervised learning does NOT use the target variable (Attrition). It looks for patterns in the employee features alone.
+            An anomaly is an unusual data pattern. It does not automatically mean that the employee will leave.
+        </p>
+    </div>
+    
+    <!-- Algorithm Selection -->
+    <div class="card mb-6">
+        <div class="card-header bg-gray-50">
+            <h2 class="card-title">Select Algorithm</h2>
+        </div>
+        <div class="card-body">
+            <div class="flex flex-wrap gap-4">
+                <button class="btn btn-outline unsupervised-btn active" data-algo="kmeans">
+                    <i class="ph ph-users mr-2"></i> K-Means Clustering
+                </button>
+                <button class="btn btn-outline unsupervised-btn" data-algo="dbscan">
+                    <i class="ph ph-scan mr-2"></i> DBSCAN
+                </button>
+                <button class="btn btn-outline unsupervised-btn" data-algo="anomaly">
+                    <i class="ph ph-warning-octagon mr-2"></i> Anomaly Detection
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- K-Means Section -->
+    <div id="algo-kmeans" class="algo-section">
+        <div class="card mb-6">
+            <div class="card-header bg-gray-50">
+                <h2 class="card-title">K-Means Clustering</h2>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <strong class="block mb-2">What does it do?</strong>
+                    <p class="text-sm text-gray-700">
+                        Groups employees into K groups based on similarity of their feature patterns.
+                    </p>
+                </div>
+                
+                <div class="grid grid-cols-1 md-grid-cols-3 gap-4 mb-4">
+                    <div class="form-group">
+                        <label class="form-label font-bold">Number of Clusters (K)</label>
+                        <input type="number" id="kmeans-k" class="form-control" value="3" min="2" max="10">
+                        <div class="text-xs text-muted mt-1">Range: 2-10</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-bold">Feature Representation</label>
+                        <select id="kmeans-representation" class="form-control">
+                            <option value="false">Processed Features</option>
+                            <option value="true" {% if not unsupervised_readiness.pca_available %}disabled{% endif %}>
+                                PCA Features {% if not unsupervised_readiness.pca_available %}(Not Available){% endif %}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Random State</label>
+                        <input type="number" id="kmeans-random-state" class="form-control" value="42">
+                    </div>
+                </div>
+                
+                <button type="button" class="btn btn-primary" id="btn-run-kmeans">
+                    <i class="ph ph-play"></i> Run K-Means
+                </button>
+            </div>
+        </div>
+        
+        <!-- K-Means Results -->
+        <div id="kmeans-results" class="hidden">
+            <div class="card border-primary mb-6">
+                <div class="card-header bg-primary-light">
+                    <h2 class="card-title text-primary">K-Means Results</h2>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-1 md-grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <h3 class="font-bold text-sm mb-2">Cluster Distribution</h3>
+                            <div id="kmeans-cluster-dist"></div>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm mb-2">Cluster Characteristics</h3>
+                            <div id="kmeans-cluster-char"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="font-bold text-sm mb-2">Cluster Visualization (PC1 vs PC2)</h3>
+                        <div style="height: 400px;">
+                            <canvas id="kmeans-chart"></canvas>
+                        </div>
+                        <p class="text-xs text-muted mt-2">Clusters are visualized using the first two PCA components.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- DBSCAN Section -->
+    <div id="algo-dbscan" class="algo-section hidden">
+        <div class="card mb-6">
+            <div class="card-header bg-gray-50">
+                <h2 class="card-title">DBSCAN</h2>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <strong class="block mb-2">What does it do?</strong>
+                    <p class="text-sm text-gray-700">
+                        Finds dense groups of similar observations and marks isolated observations as noise.
+                    </p>
+                </div>
+                
+                <div class="grid grid-cols-1 md-grid-cols-3 gap-4 mb-4">
+                    <div class="form-group">
+                        <label class="form-label font-bold">eps</label>
+                        <input type="number" id="dbscan-eps" class="form-control" value="5.0" step="0.5" min="0.5">
+                        <div class="text-xs text-muted mt-1">Maximum distance between samples</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-bold">min_samples</label>
+                        <input type="number" id="dbscan-min-samples" class="form-control" value="5" min="2">
+                        <div class="text-xs text-muted mt-1">Minimum samples in a neighborhood</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-bold">Feature Representation</label>
+                        <select id="dbscan-representation" class="form-control">
+                            <option value="false">Processed Features</option>
+                            <option value="true" selected {% if not unsupervised_readiness.pca_available %}disabled{% endif %}>
+                                PCA Features {% if not unsupervised_readiness.pca_available %}(Not Available){% endif %}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button type="button" class="btn btn-primary" id="btn-run-dbscan">
+                    <i class="ph ph-play"></i> Run DBSCAN
+                </button>
+            </div>
+        </div>
+        
+        <!-- DBSCAN Results -->
+        <div id="dbscan-results" class="hidden">
+            <div class="card border-primary mb-6">
+                <div class="card-header bg-primary-light">
+                    <h2 class="card-title text-primary">DBSCAN Results</h2>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-2 md-grid-cols-4 gap-4 mb-4">
+                        <div class="bg-gray-100 p-3 rounded text-center">
+                            <div class="text-xl font-bold text-primary" id="dbscan-clusters">-</div>
+                            <div class="text-sm text-muted">Clusters Found</div>
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded text-center">
+                            <div class="text-xl font-bold text-warning-dark" id="dbscan-noise">-</div>
+                            <div class="text-sm text-muted">Noise Points</div>
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded text-center">
+                            <div class="text-xl font-bold text-warning-dark" id="dbscan-noise-pct">-</div>
+                            <div class="text-sm text-muted">Noise %</div>
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded text-center">
+                            <div class="text-xl font-bold text-primary" id="dbscan-rep">-</div>
+                            <div class="text-sm text-muted">Representation</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="font-bold text-sm mb-2">Cluster Distribution</h3>
+                        <div id="dbscan-cluster-dist"></div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="font-bold text-sm mb-2">Cluster Visualization (PC1 vs PC2)</h3>
+                        <div style="height: 400px;">
+                            <canvas id="dbscan-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Anomaly Detection Section -->
+    <div id="algo-anomaly" class="algo-section hidden">
+        <div class="card mb-6">
+            <div class="card-header bg-gray-50">
+                <h2 class="card-title">Anomaly Detection (Isolation Forest)</h2>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <strong class="block mb-2">What does it do?</strong>
+                    <p class="text-sm text-gray-700">
+                        Finds employee records whose feature patterns are unusual compared with the rest of the dataset.
+                    </p>
+                </div>
+                
+                <div class="grid grid-cols-1 md-grid-cols-3 gap-4 mb-4">
+                    <div class="form-group">
+                        <label class="form-label font-bold">Contamination</label>
+                        <input type="number" id="anomaly-contamination" class="form-control" value="0.1" step="0.01" min="0.01" max="0.5">
+                        <div class="text-xs text-muted mt-1">Expected proportion of anomalies (0.01-0.5)</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-bold">Feature Representation</label>
+                        <select id="anomaly-representation" class="form-control">
+                            <option value="false">Processed Features</option>
+                            <option value="true" {% if not unsupervised_readiness.pca_available %}disabled{% endif %}>
+                                PCA Features {% if not unsupervised_readiness.pca_available %}(Not Available){% endif %}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Random State</label>
+                        <input type="number" id="anomaly-random-state" class="form-control" value="42">
+                    </div>
+                </div>
+                
+                <button type="button" class="btn btn-primary" id="btn-run-anomaly">
+                    <i class="ph ph-play"></i> Detect Anomalies
+                </button>
+            </div>
+        </div>
+        
+        <!-- Anomaly Results -->
+        <div id="anomaly-results" class="hidden">
+            <div class="card border-warning mb-6">
+                <div class="card-header bg-warning-light">
+                    <h2 class="card-title text-warning-dark">Anomaly Detection Results</h2>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-2 md-grid-cols-4 gap-4 mb-4">
+                        <div class="bg-gray-100 p-3 rounded text-center">
+                            <div class="text-xl font-bold text-primary" id="anomaly-total">-</div>
+                            <div class="text-sm text-muted">Total Employees</div>
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded text-center">
+                            <div class="text-xl font-bold text-success-dark" id="anomaly-normal">-</div>
+                            <div class="text-sm text-muted">Normal</div>
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded text-center">
+                            <div class="text-xl font-bold text-warning-dark" id="anomaly-count">-</div>
+                            <div class="text-sm text-muted">Anomalies</div>
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded text-center">
+                            <div class="text-xl font-bold text-warning-dark" id="anomaly-pct">-</div>
+                            <div class="text-sm text-muted">Anomaly %</div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning mb-4">
+                        <strong class="block mb-1"><i class="ph ph-warning"></i> Important</strong>
+                        <p class="text-sm">
+                            An anomaly is an unusual data pattern. It does not automatically mean that the employee will leave.
+                            This analysis identifies unusual feature patterns, not attrition risk.
+                        </p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="font-bold text-sm mb-2">Anomaly Visualization (PC1 vs PC2)</h3>
+                        <div style="height: 400px;">
+                            <canvas id="anomaly-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ELI5 for Unsupervised -->
+    <div class="card bg-gray-50">
+        <div class="card-body">
+            <h3 class="font-bold text-sm mb-3"><i class="ph ph-lightbulb"></i> Algorithm Explanations</h3>
+            <div class="grid grid-cols-1 md-grid-cols-3 gap-4">
+                <div>
+                    <strong class="block text-primary mb-1">K-Means</strong>
+                    <p class="text-xs text-gray-700">
+                        Groups employees into a chosen number of groups based on how similar their feature patterns are.
+                    </p>
+                </div>
+                <div>
+                    <strong class="block text-primary mb-1">DBSCAN</strong>
+                    <p class="text-xs text-gray-700">
+                        Finds dense groups of similar observations and marks isolated observations as noise.
+                    </p>
+                </div>
+                <div>
+                    <strong class="block text-primary mb-1">Isolation Forest</strong>
+                    <p class="text-xs text-gray-700">
+                        Looks for observations that are easier to separate from the rest of the data, which can indicate unusual patterns.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/ml.js') }}"></script>
+{% endblock %}

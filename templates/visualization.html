@@ -191,7 +191,7 @@
 
 <!-- Inject Filter Options for JS -->
 <script id="filter-options-data" type="application/json">
-    {{ filter_options | tojson | safe }}
+    {{ filter_options | tojson | safe if filter_options else '{}' }}
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

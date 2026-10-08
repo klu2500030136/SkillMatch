@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block title %}Model Evaluation{% endblock %}
+{% block breadcrumb %}Model Evaluation{% endblock %}
+
+{% block content %}
+{% if not dataset.loaded %}
+<!-- DATASET REQUIRED STATE -->
+<div class="page-header mb-6">
+    <h1 class="page-title">Model Evaluation</h1>
+    <p class="page-subtitle text-muted">Evaluate how well the trained models perform on unseen employee data.</p>
+</div>
+
+<div class="card text-center py-8">
+    <div class="mb-4">
+        <i class="ph ph-chart-line-up text-muted" style="font-size: 48px;"></i>
+    </div>
+    <h2 class="text-lg font-medium mb-2">Upload a dataset first.</h2>
+    <a href="/upload" class="btn btn-primary mt-4">Upload Dataset</a>
+</div>
+
+{% else %}
+<!-- EVALUATION PAGE -->
+<div class="page-header mb-6">
+    <h1 class="page-title">Model Evaluation</h1>
+    <p class="page-subtitle text-muted">Evaluate how well the trained models perform on unseen employee data.</p>
+</div>
+
+{% if not readiness.ready %}
+<!-- NOT READY STATE -->
+<div class="card mb-6">
+    <div class="card-body">
+        <div class="flex items-center gap-3 mb-4">
+            <i class="ph ph-warning-circle text-warning" style="font-size: 32px;"></i>
+            <div>
+                <h3 class="text-lg font-medium">Evaluation Not Ready</h3>
+                <p class="text-muted">{{ readiness.reason }}</p>
+            </div>
+        </div>
+        <a href="{{ url_for('main.training') }}" class="btn btn-primary">Train Models</a>
+    </div>
+</div>
+
+{% else %}
+<!-- EVALUATION CONTENT -->
+<!-- SECTION 1: EVALUATION STATUS -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">Evaluation Status</h3>
+        <div class="grid grid-cols-4 gap-4">
+            <div class="stat-box">
+                <div class="stat-label">Dataset</div>
+                <div class="stat-value">{{ dataset.filename }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Target</div>
+                <div class="stat-value">{{ readiness.target }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Test Samples</div>
+                <div class="stat-value">{{ readiness.test_rows }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Available Models</div>
+                <div class="stat-value">{{ readiness.available_models|length }}</div>
+            </div>
+        </div>
+        <div class="mt-4 text-sm text-muted">
+            <i class="ph ph-info"></i> Evaluation uses the held-out test set from Phase 5 training.
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 2: MODEL SELECTION -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">Select Model to Evaluate</h3>
+        <div class="flex items-center gap-4">
+            <label class="text-sm font-medium">Model:</label>
+            <select id="model-selector" class="form-select" style="max-width: 300px;">
+                <option value="">-- Select a model --</option>
+                {% for model in readiness.available_models %}
+                <option value="{{ model.name }}" data-type="{% if 'regression' in model.name.lower() %}regression{% else %}classification{% endif %}">
+                    {{ model.name }}
+                </option>
+                {% endfor %}
+            </select>
+            <button id="evaluate-btn" class="btn btn-primary" disabled>
+                <i class="ph ph-play"></i> Evaluate
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 3: EVALUATION RESULTS (Hidden by default) -->
+<div id="evaluation-results" style="display: none;">
+    
+    <!-- CLASSIFICATION RESULTS -->
+    <div id="classification-results" style="display: none;">
+        <!-- KEY METRICS -->
+        <div class="card mb-6">
+            <div class="card-body">
+                <h3 class="card-title mb-4">Key Metrics</h3>
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="metric-card">
+                        <div class="metric-label">Accuracy</div>
+                        <div class="metric-value" id="metric-accuracy">--</div>
+                        <div class="metric-desc">Overall correctness</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Precision</div>
+                        <div class="metric-value" id="metric-precision">--</div>
+                        <div class="metric-desc">When predicted Attrition, how often correct</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Recall</div>
+                        <div class="metric-value" id="metric-recall">--</div>
+                        <div class="metric-desc">How many actual Attrition cases found</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">F1-Score</div>
+                        <div class="metric-value" id="metric-f1">--</div>
+                        <div class="metric-desc">Combined precision and recall</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONFUSION MATRIX -->
+        <div class="card mb-6">
+            <div class="card-body">
+                <h3 class="card-title mb-4">Confusion Matrix</h3>
+                <div class="confusion-matrix-container">
+                    <table class="confusion-matrix">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th colspan="2">Predicted</th>
+                            </tr>
+                            <tr>
+                                <th>Actual</th>
+                                <th>No</th>
+                                <th>Yes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th>No</th>
+                                <td class="cm-cell tn">
+                                    <div class="cm-label">TN</div>
+                                    <div class="cm-value" id="cm-tn">--</div>
+                                </td>
+                                <td class="cm-cell fp">
+                                    <div class="cm-label">FP</div>
+                                    <div class="cm-value" id="cm-fp">--</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Yes</th>
+                                <td class="cm-cell fn">
+                                    <div class="cm-label">FN</div>
+                                    <div class="cm-value" id="cm-fn">--</div>
+                                </td>
+                                <td class="cm-cell tp">
+                                    <div class="cm-label">TP</div>
+                                    <div class="cm-value" id="cm-tp">--</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 text-sm text-muted">
+                    <p><strong>TN (True Negative):</strong> Model correctly predicted No Attrition</p>
+                    <p><strong>FP (False Positive):</strong> Model predicted Attrition, but actual was No Attrition</p>
+                    <p><strong>FN (False Negative):</strong> Model predicted No Attrition, but actual was Attrition</p>
+                    <p><strong>TP (True Positive):</strong> Model correctly predicted Attrition</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CLASSIFICATION REPORT -->
+        <div class="card mb-6">
+            <div class="card-body">
+                <h3 class="card-title mb-4">Classification Report</h3>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Class</th>
+                                <th>Precision</th>
+                                <th>Recall</th>
+                                <th>F1-Score</th>
+                                <th>Support</th>
+                            </tr>
+                        </thead>
+                        <tbody id="classification-report-body">
+                            <!-- Filled by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROC CURVE -->
+        <div class="card mb-6" id="roc-card" style="display: none;">
+            <div class="card-body">
+                <h3 class="card-title mb-4">ROC Curve</h3>
+                <div class="chart-container">
+                    <canvas id="roc-chart"></canvas>
+                </div>
+                <div class="mt-4">
+                    <strong>ROC-AUC:</strong> <span id="roc-auc-value">--</span>
+                </div>
+                <div class="mt-2 text-sm text-muted">
+                    ROC-AUC measures how well the model separates the two classes across different decision thresholds.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REGRESSION RESULTS -->
+    <div id="regression-results" style="display: none;">
+        <div class="card mb-6">
+            <div class="card-body">
+                <h3 class="card-title mb-4">Regression Evaluation</h3>
+                <div class="mb-4">
+                    <strong>Target:</strong> <span id="regression-target">--</span>
+                </div>
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="metric-card">
+                        <div class="metric-label">MAE</div>
+                        <div class="metric-value" id="metric-mae">--</div>
+                        <div class="metric-desc">Mean Absolute Error</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">MSE</div>
+                        <div class="metric-value" id="metric-mse">--</div>
+                        <div class="metric-desc">Mean Squared Error</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">RMSE</div>
+                        <div class="metric-value" id="metric-rmse">--</div>
+                        <div class="metric-desc">Root Mean Squared Error</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">R²</div>
+                        <div class="metric-value" id="metric-r2">--</div>
+                        <div class="metric-desc">Coefficient of Determination</div>
+                    </div>
+                </div>
+                <div class="mt-4 text-sm text-muted">
+                    <p><strong>MAE:</strong> Average absolute difference between predicted and actual values</p>
+                    <p><strong>MSE:</strong> Average squared prediction error</p>
+                    <p><strong>RMSE:</strong> Square root of average squared prediction error</p>
+                    <p><strong>R²:</strong> Proportion of variance in target explained by the model</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 7: MODEL COMPARISON -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">Model Comparison</h3>
+        <button id="compare-btn" class="btn btn-outline mb-4">
+            <i class="ph ph-arrows-left-right"></i> Compare All Models
+        </button>
+        <div id="comparison-results" style="display: none;">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Accuracy</th>
+                            <th>Precision</th>
+                            <th>Recall</th>
+                            <th>F1-Score</th>
+                            <th>ROC-AUC</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comparison-table-body">
+                        <!-- Filled by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 8: ELI5 EXPLANATION -->
+<div class="card mb-6">
+    <div class="card-body">
+        <h3 class="card-title mb-4">What Do These Numbers Mean?</h3>
+        <div class="grid grid-cols-2 gap-4">
+            <div class="explanation-box">
+                <h4 class="font-medium mb-2">Accuracy</h4>
+                <p class="text-sm text-muted">How often was the model correct overall across all predictions?</p>
+            </div>
+            <div class="explanation-box">
+                <h4 class="font-medium mb-2">Precision</h4>
+                <p class="text-sm text-muted">When the model predicted Attrition, how often was it actually correct?</p>
+            </div>
+            <div class="explanation-box">
+                <h4 class="font-medium mb-2">Recall</h4>
+                <p class="text-sm text-muted">How many of the employees who actually had Attrition did the model correctly identify?</p>
+            </div>
+            <div class="explanation-box">
+                <h4 class="font-medium mb-2">F1-Score</h4>
+                <p class="text-sm text-muted">A combined measure that balances precision and recall into a single score.</p>
+            </div>
+            <div class="explanation-box">
+                <h4 class="font-medium mb-2">Confusion Matrix</h4>
+                <p class="text-sm text-muted">Shows exactly which predictions were correct and which were mistakes (TN, FP, FN, TP).</p>
+            </div>
+            <div class="explanation-box">
+                <h4 class="font-medium mb-2">ROC-AUC</h4>
+                <p class="text-sm text-muted">Measures how well the model separates the two classes across different decision thresholds. Higher is better.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" style="display: none;">
+    <div class="loading-spinner">
+        <i class="ph ph-spinner ph-spin"></i>
+        <span>Evaluating model...</span>
+    </div>
+</div>
+
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/static/js/evaluation.js"></script>
+{% endblock %}

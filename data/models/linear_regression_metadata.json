@@ -1,0 +1,17 @@
+{
+    "project": "SkillMatch",
+    "task": "regression",
+    "target": "YearsAtCompany",
+    "model": "Linear Regression",
+    "validation_metrics": {
+        "mae": 4.4744,
+        "mse": 37.7872,
+        "rmse": 6.1471,
+        "r2": -0.0062
+    },
+    "random_state": 42,
+    "training_rows": 1029,
+    "validation_rows": 220,
+    "feature_count": 50,
+    "trained_at": "2026-10-09T00:27:07.574504"
+}

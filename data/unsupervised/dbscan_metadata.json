@@ -1,0 +1,47 @@
+{
+  "algorithm": "DBSCAN",
+  "eps": 5.0,
+  "min_samples": 5,
+  "representation": "PCA Features",
+  "use_pca": true,
+  "samples_count": 1029,
+  "features_count": 22,
+  "feature_names": [
+    "PC1",
+    "PC2",
+    "PC3",
+    "PC4",
+    "PC5",
+    "PC6",
+    "PC7",
+    "PC8",
+    "PC9",
+    "PC10",
+    "PC11",
+    "PC12",
+    "PC13",
+    "PC14",
+    "PC15",
+    "PC16",
+    "PC17",
+    "PC18",
+    "PC19",
+    "PC20",
+    "PC21",
+    "PC22"
+  ],
+  "n_clusters": 1,
+  "n_noise": 8,
+  "noise_percentage": 0.78,
+  "cluster_distribution": {
+    "-1": {
+      "count": 8,
+      "percentage": 0.78
+    },
+    "0": {
+      "count": 1021,
+      "percentage": 99.22
+    }
+  },
+  "trained_at": "2026-10-09T00:26:33.538931"
+}
